@@ -129,6 +129,11 @@ AGENTES = {
 4. Informe que o especialista vai assumir o atendimento
 5. Seja breve e objetiva
 
+🚫 PROIBIDO:
+• NUNCA invente telefones, e-mails, endereços ou dados de contato
+• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
+• Se o cliente pedir telefone, diga que um contador entrará em contato em breve
+
 ⚠️ IMPORTANTE: Não resolva dúvidas técnicas. Só classifique e transfira."""
     },
 
@@ -154,6 +159,11 @@ AGENTES = {
 6. Se não souber algo, diga que vai consultar o contador responsável
 7. Ao final, pergunte se precisa de mais alguma coisa
 
+🚫 PROIBIDO:
+• NUNCA invente telefones, e-mails, endereços ou dados de contato
+• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
+• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+
 ⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
     },
 
@@ -178,6 +188,11 @@ AGENTES = {
 5. Sempre peça a quantidade de funcionários
 6. Oriente sobre documentos necessários
 7. Seja empático com questões trabalhistas sensíveis
+
+🚫 PROIBIDO:
+• NUNCA invente telefones, e-mails, endereços ou dados de contato
+• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
+• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
 
 ⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
     },
@@ -205,6 +220,11 @@ AGENTES = {
 6. Sugira melhorias quando apropriado
 7. Relacione dados contábeis com decisões de negócio
 
+🚫 PROIBIDO:
+• NUNCA invente telefones, e-mails, endereços ou dados de contato
+• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
+• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+
 ⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
     },
 
@@ -231,6 +251,11 @@ AGENTES = {
 6. Explique custos envolvidos quando perguntado
 7. Seja paciente — processos societários geram ansiedade
 
+🚫 PROIBIDO:
+• NUNCA invente telefones, e-mails, endereços ou dados de contato
+• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
+• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+
 ⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
     }
 }
@@ -251,8 +276,8 @@ def after_request(response):
 def home():
     return jsonify({
         "status": "online",
-        "service": "Caio Contábil - Multi-Agente API v5.0",
-        "version": "5.0.0",
+        "service": "Caio Contábil - Multi-Agente API v5.1",
+        "version": "5.1.0",
         "agentes": list(AGENTES.keys())
     })
 
@@ -264,8 +289,8 @@ def chat():
     if request.method == 'GET':
         return jsonify({
             "status": "online",
-            "service": "Caio Contábil - Multi-Agente API v5.0",
-            "version": "5.0.0"
+            "service": "Caio Contábil - Multi-Agente API v5.1",
+            "version": "5.1.0"
         })
 
     try:
@@ -356,7 +381,7 @@ def detectar_agente_por_palavras(message):
 
     return None
 
-# ========== CHAMAR GEMINI COM RETRY (trata erro 429) ==========
+# ========== CHAMAR GEMINI COM RETRY ==========
 def call_gemini_com_retry(message, agente_key, historico, transferencia=False, max_retries=3):
     """Chama Gemini com retry exponencial para rate limit (429)."""
 
@@ -404,7 +429,6 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
 
         except urllib.error.HTTPError as e:
             if e.code == 429:
-                # Rate limit - espera e tenta de novo
                 wait_time = (2 ** tentativa) + random.uniform(0, 1)
                 print(f"Rate limit (429). Tentativa {tentativa + 1}/{max_retries}. Aguardando {wait_time:.1f}s...")
                 time.sleep(wait_time)
@@ -416,7 +440,6 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
             print(f"Erro de conexão: {ex}")
             return "⚠️ Erro de conexão."
 
-    # Se esgotou as tentativas
     return "⚠️ Servidor ocupado. Tente novamente em alguns segundos."
 
 # ========== TELEGRAM ==========
