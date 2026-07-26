@@ -1,12 +1,10 @@
-"""
-Backend de Chatbot Inteligente - Caio Contábil
-Versão 2.0 - Mais robusta para Vercel Serverless
-"""
-
+from flask import Flask, request, jsonify
 import os
 import json
 import urllib.request
 import urllib.error
+
+app = Flask(__name__)
 
 # ========== CONFIGURAÇÃO ==========
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -34,91 +32,57 @@ EXEMPLO DE RESPOSTA INICIAL:
 Para te direcionar ao contador certo, me conta: você precisa de ajuda com dúvida fiscal, entregar documentos, agendar reunião ou é algo urgente?"
 """
 
-# ========== HISTÓRICO (em memória) ==========
+# ========== HISTÓRICO ==========
 sessions = {}
 
-# ========== FUNÇÃO PRINCIPAL (Vercel compatível) ==========
-def handler(request):
-    """
-    Handler principal para Vercel Serverless Functions.
-    request é um objeto com: method, body, headers, url, query
-    """
-    method = request.get("method", "GET")
+# ========== CORS ==========
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
 
-    # CORS headers
-    cors_headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json"
-    }
+# ========== ROTAS ==========
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "online",
+        "service": "Caio Contábil - Chatbot API",
+        "version": "3.0.0"
+    })
 
-    # Preflight OPTIONS
-    if method == "OPTIONS":
-        return {"statusCode": 200, "headers": cors_headers, "body": ""}
+@app.route('/chat', methods=['GET', 'POST', 'OPTIONS'])
+def chat():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
 
-    # Health check GET
-    if method == "GET":
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "online",
-                "service": "Caio Contábil - Chatbot API",
-                "version": "2.0.0"
-            })
-        }
+    if request.method == 'GET':
+        return jsonify({
+            "status": "online",
+            "service": "Caio Contábil - Chatbot API",
+            "version": "3.0.0"
+        })
 
-    # POST /chat
-    if method == "POST":
-        try:
-            body = request.get("body", "{}")
-            # Vercel pode enviar body como string ou já parseado
-            if isinstance(body, str):
-                data = json.loads(body)
-            else:
-                data = body
+    # POST
+    try:
+        data = request.get_json() or {}
+        message = data.get("message", "").strip()
+        session_id = data.get("session_id", "default")
 
-            message = data.get("message", "").strip()
-            session_id = data.get("session_id", "default")
+        if not message:
+            return jsonify({"error": "Mensagem vazia"}), 400
 
-            if not message:
-                return {
-                    "statusCode": 400,
-                    "headers": cors_headers,
-                    "body": json.dumps({"error": "Mensagem vazia"})
-                }
+        # Chama Gemini
+        reply = call_gemini(message, session_id)
 
-            # Chama Gemini
-            reply = call_gemini(message, session_id)
+        # Notifica Telegram
+        notify_telegram(session_id, message, reply)
 
-            # Notifica Telegram
-            notify_telegram(session_id, message, reply)
+        return jsonify({"reply": reply, "session_id": session_id})
 
-            return {
-                "statusCode": 200,
-                "headers": cors_headers,
-                "body": json.dumps({"reply": reply, "session_id": session_id})
-            }
-
-        except json.JSONDecodeError:
-            return {
-                "statusCode": 400,
-                "headers": cors_headers,
-                "body": json.dumps({"error": "JSON inválido"})
-            }
-        except Exception as e:
-            return {
-                "statusCode": 500,
-                "headers": cors_headers,
-                "body": json.dumps({"error": str(e)})
-            }
-
-    return {
-        "statusCode": 404,
-        "headers": cors_headers,
-        "body": json.dumps({"error": "Método não suportado"})
-    }
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ========== GEMINI ==========
 def call_gemini(message, session_id):
@@ -156,10 +120,9 @@ def call_gemini(message, session_id):
 
             return reply
     except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
         return f"⚠️ Erro na API do Gemini ({e.code}). Um contador será notificado."
-    except Exception as e:
-        return f"⚠️ Erro de conexão. Um contador será notificado em breve."
+    except Exception:
+        return "⚠️ Erro de conexão. Um contador será notificado em breve."
 
 # ========== TELEGRAM ==========
 def notify_telegram(session_id, message, reply):
