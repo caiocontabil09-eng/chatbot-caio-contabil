@@ -5,6 +5,7 @@ import urllib.request
 import urllib.error
 import time
 import random
+import re
 
 app = Flask(__name__)
 
@@ -13,8 +14,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-# ========== DADOS DE CONTATO DO ESCRITÓRIO ==========
-TELEFONE_ESCRITORIO = "(14) 99879-7126"
+# ========== DADOS OFICIAIS DO ESCRITÓRIO ==========
+TELEFONE_OFICIAL = "(14) 99879-7126"
 
 # ========== PALAVRAS-CHAVE PARA ROUTING ==========
 PALAVRAS_CHAVE = {
@@ -89,29 +90,11 @@ PALAVRAS_CHAVE = {
 
 # ========== MENSAGENS DE BOAS-VINDAS POR AGENTE (fallback) ==========
 BOAS_VINDAS = {
-    "triagem": "Olá! 😊 Bem-vindo ao atendimento da Caio Contábil. Sou a Ana, sua assistente virtual de triagem.
-
-Para te direcionar ao contador certo, me conta: você precisa de ajuda com dúvida fiscal, folha de pagamento, contabilidade, ou abertura/alteração de empresa?",
-    "fiscal": "📊 **Especialista Fiscal** assumindo o atendimento...
-
-Olá! Sou o Especialista Fiscal da Caio Contábil. Estou aqui para ajudar com suas dúvidas sobre impostos, guias, obrigações acessórias e toda a parte tributária.
-
-Em que posso ajudá-lo? 😊",
-    "dp_rh": "👥 **Especialista DP/RH** assumindo o atendimento...
-
-Olá! Sou o Especialista de Departamento Pessoal da Caio Contábil. Estou aqui para ajudar com folha de pagamento, eSocial, férias, rescisões e toda a parte trabalhista.
-
-Em que posso ajudá-lo? 😊",
-    "contabil": "📈 **Especialista Contábil** assumindo o atendimento...
-
-Olá! Sou o Especialista Contábil da Caio Contábil. Estou aqui para ajudar com balanço, DRE, livros contábeis, escrituração e análise financeira.
-
-Em que posso ajudá-lo? 😊",
-    "societario": "🏢 **Especialista Societário** assumindo o atendimento...
-
-Olá! Sou o Especialista Societário da Caio Contábil. Estou aqui para ajudar com abertura, alteração, encerramento de empresas, certidões e contratos.
-
-Em que posso ajudá-lo? 😊"
+    "triagem": "Olá! 😊 Bem-vindo ao atendimento da Caio Contábil. Sou a Ana, sua assistente virtual de triagem.\n\nPara te direcionar ao contador certo, me conta: você precisa de ajuda com dúvida fiscal, folha de pagamento, contabilidade, ou abertura/alteração de empresa?",
+    "fiscal": "📊 **Especialista Fiscal** assumindo o atendimento...\n\nOlá! Sou o Especialista Fiscal da Caio Contábil. Estou aqui para ajudar com suas dúvidas sobre impostos, guias, obrigações acessórias e toda a parte tributária.\n\nEm que posso ajudá-lo? 😊",
+    "dp_rh": "👥 **Especialista DP/RH** assumindo o atendimento...\n\nOlá! Sou o Especialista de Departamento Pessoal da Caio Contábil. Estou aqui para ajudar com folha de pagamento, eSocial, férias, rescisões e toda a parte trabalhista.\n\nEm que posso ajudá-lo? 😊",
+    "contabil": "📈 **Especialista Contábil** assumindo o atendimento...\n\nOlá! Sou o Especialista Contábil da Caio Contábil. Estou aqui para ajudar com balanço, DRE, livros contábeis, escrituração e análise financeira.\n\nEm que posso ajudá-lo? 😊",
+    "societario": "🏢 **Especialista Societário** assumindo o atendimento...\n\nOlá! Sou o Especialista Societário da Caio Contábil. Estou aqui para ajudar com abertura, alteração, encerramento de empresas, certidões e contratos.\n\nEm que posso ajudá-lo? 😊"
 }
 
 # ========== PROMPTS DOS AGENTES ==========
@@ -132,14 +115,18 @@ AGENTES = {
 4. Informe que o especialista vai assumir o atendimento
 5. Seja breve e objetiva
 
-📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
-• Nosso telefone de contato é: (14) 99879-7126
-• Se o cliente pedir telefone, forneça EXATAMENTE este número
-• NUNCA invente ou altere este número
+📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
+O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
+
+REGRAS ABSOLUTAS SOBRE TELEFONE:
+• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
+• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
+• NUNCA invente, crie ou imagine outro número de telefone
+• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
+• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
 
 🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato
-• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
+• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
 
 ⚠️ IMPORTANTE: Não resolva dúvidas técnicas. Só classifique e transfira."""
     },
@@ -166,14 +153,18 @@ AGENTES = {
 6. Se não souber algo, diga que vai consultar o contador responsável
 7. Ao final, pergunte se precisa de mais alguma coisa
 
-📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
-• Nosso telefone de contato é: (14) 99879-7126
-• Se o cliente pedir telefone, forneça EXATAMENTE este número
-• NUNCA invente ou altere este número
+📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
+O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
+
+REGRAS ABSOLUTAS SOBRE TELEFONE:
+• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
+• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
+• NUNCA invente, crie ou imagine outro número de telefone
+• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
+• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
 
 🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato
-• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
+• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
 
 ⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
     },
@@ -200,14 +191,18 @@ AGENTES = {
 6. Oriente sobre documentos necessários
 7. Seja empático com questões trabalhistas sensíveis
 
-📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
-• Nosso telefone de contato é: (14) 99879-7126
-• Se o cliente pedir telefone, forneça EXATAMENTE este número
-• NUNCA invente ou altere este número
+📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
+O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
+
+REGRAS ABSOLUTAS SOBRE TELEFONE:
+• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
+• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
+• NUNCA invente, crie ou imagine outro número de telefone
+• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
+• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
 
 🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato
-• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
+• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
 
 ⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
     },
@@ -235,14 +230,18 @@ AGENTES = {
 6. Sugira melhorias quando apropriado
 7. Relacione dados contábeis com decisões de negócio
 
-📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
-• Nosso telefone de contato é: (14) 99879-7126
-• Se o cliente pedir telefone, forneça EXATAMENTE este número
-• NUNCA invente ou altere este número
+📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
+O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
+
+REGRAS ABSOLUTAS SOBRE TELEFONE:
+• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
+• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
+• NUNCA invente, crie ou imagine outro número de telefone
+• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
+• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
 
 🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato
-• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
+• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
 
 ⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
     },
@@ -270,14 +269,18 @@ AGENTES = {
 6. Explique custos envolvidos quando perguntado
 7. Seja paciente — processos societários geram ansiedade
 
-📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
-• Nosso telefone de contato é: (14) 99879-7126
-• Se o cliente pedir telefone, forneça EXATAMENTE este número
-• NUNCA invente ou altere este número
+📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
+O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
+
+REGRAS ABSOLUTAS SOBRE TELEFONE:
+• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
+• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
+• NUNCA invente, crie ou imagine outro número de telefone
+• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
+• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
 
 🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato
-• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
+• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
 
 ⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
     }
@@ -293,6 +296,49 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     return response
+
+# ========== FUNÇÃO DE SANITIZAÇÃO DE TELEFONE ==========
+def sanitizar_telefone_na_resposta(reply, user_message):
+    """
+    Pós-processamento de segurança: garante que qualquer número de telefone
+    na resposta seja o número oficial (14) 99879-7126.
+    """
+    # Detecta se o usuário está pedindo telefone/contato
+    pedindo_telefone = any(palavra in user_message.lower() for palavra in [
+        "telefone", "ligar", "ligação", "ligacao", "contato", "whatsapp", "zap",
+        "numero", "número", "fone", "celular", "call", "phone", "tel"
+    ])
+
+    if not pedindo_telefone:
+        return reply
+
+    # Padrões de telefone brasileiro que podem ter sido inventados pelo modelo
+    padroes_telefone = [
+        r'\(\d{2}\)\s?\d{4,5}-\d{4}',           # (11) 99999-9999
+        r'\(\d{2}\)\s?\d{4,5}-[Xx\*]{4}',        # (11) 3003-XXXX
+        r'\d{2}\s?\d{4,5}-\d{4}',                 # 11 99999-9999
+        r'\(\d{2}\)\s?\d{8,9}',                   # (11) 999999999
+        r'\d{2}\s?\d{8,9}',                       # 11 999999999
+        r'\(\d{2}\)\s?\d{4}-\d{4}',              # (11) 5555-5555
+    ]
+
+    telefone_oficial = TELEFONE_OFICIAL
+    reply_corrigida = reply
+
+    for padrao in padroes_telefone:
+        reply_corrigida = re.sub(padrao, telefone_oficial, reply_corrigida)
+
+    # Se a resposta continha um número fictício e foi substituído,
+    # garante que não fique texto estranho ao redor
+    if reply_corrigida != reply:
+        # Remove menções a "fictício", "padrão", "exemplo" etc. que o modelo possa ter adicionado
+        reply_corrigida = re.sub(r'\*?\(número fictício[/\-]?padrão[^)]*\)\*?', '', reply_corrigida, flags=re.IGNORECASE)
+        reply_corrigida = re.sub(r'\*?número fictício[^\*]*\*?', '', reply_corrigida, flags=re.IGNORECASE)
+        reply_corrigida = re.sub(r'\*?padrão de atendimento[^\*]*\*?', '', reply_corrigida, flags=re.IGNORECASE)
+        reply_corrigida = re.sub(r'\s{2,}', ' ', reply_corrigida)
+        reply_corrigida = reply_corrigida.strip()
+
+    return reply_corrigida
 
 # ========== ROTAS ==========
 @app.route('/')
@@ -360,18 +406,21 @@ def chat():
         # 3. Chama Gemini com retry para rate limit
         reply = call_gemini_com_retry(message, agente_key, sessao["historico"], transferencia)
 
-        # 4. Se Gemini falhou completamente, usa fallback
+        # 4. SANITIZAÇÃO DE SEGURANÇA: corrige telefones inventados pelo modelo
+        reply = sanitizar_telefone_na_resposta(reply, message)
+
+        # 5. Se Gemini falhou completamente, usa fallback
         if reply.startswith("⚠️"):
             if transferencia:
                 reply = BOAS_VINDAS.get(agente_key, BOAS_VINDAS["triagem"])
             else:
                 reply = f"Olá! Sou o {AGENTES[agente_key]['nome']}. Em que posso ajudá-lo? 😊"
 
-        # 5. Salva histórico
+        # 6. Salva histórico
         sessao["historico"].append({"role": "user", "text": message})
         sessao["historico"].append({"role": "model", "text": reply})
 
-        # 6. Notifica Telegram
+        # 7. Notifica Telegram
         notify_telegram(session_id, message, reply, agente_key)
 
         return jsonify({
