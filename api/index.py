@@ -13,6 +13,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+# ========== DADOS DE CONTATO DO ESCRITÓRIO ==========
+TELEFONE_ESCRITORIO = "(14) 99879-7126"
+
 # ========== PALAVRAS-CHAVE PARA ROUTING ==========
 PALAVRAS_CHAVE = {
     "fiscal": [
@@ -129,10 +132,14 @@ AGENTES = {
 4. Informe que o especialista vai assumir o atendimento
 5. Seja breve e objetiva
 
+📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
+• Nosso telefone de contato é: (14) 99879-7126
+• Se o cliente pedir telefone, forneça EXATAMENTE este número
+• NUNCA invente ou altere este número
+
 🚫 PROIBIDO:
-• NUNCA invente telefones, e-mails, endereços ou dados de contato
-• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
-• Se o cliente pedir telefone, diga que um contador entrará em contato em breve
+• NUNCA invente e-mails, endereços ou outros dados de contato
+• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
 
 ⚠️ IMPORTANTE: Não resolva dúvidas técnicas. Só classifique e transfira."""
     },
@@ -159,10 +166,14 @@ AGENTES = {
 6. Se não souber algo, diga que vai consultar o contador responsável
 7. Ao final, pergunte se precisa de mais alguma coisa
 
+📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
+• Nosso telefone de contato é: (14) 99879-7126
+• Se o cliente pedir telefone, forneça EXATAMENTE este número
+• NUNCA invente ou altere este número
+
 🚫 PROIBIDO:
-• NUNCA invente telefones, e-mails, endereços ou dados de contato
-• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
-• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+• NUNCA invente e-mails, endereços ou outros dados de contato
+• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
 
 ⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
     },
@@ -189,10 +200,14 @@ AGENTES = {
 6. Oriente sobre documentos necessários
 7. Seja empático com questões trabalhistas sensíveis
 
+📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
+• Nosso telefone de contato é: (14) 99879-7126
+• Se o cliente pedir telefone, forneça EXATAMENTE este número
+• NUNCA invente ou altere este número
+
 🚫 PROIBIDO:
-• NUNCA invente telefones, e-mails, endereços ou dados de contato
-• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
-• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+• NUNCA invente e-mails, endereços ou outros dados de contato
+• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
 
 ⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
     },
@@ -220,10 +235,14 @@ AGENTES = {
 6. Sugira melhorias quando apropriado
 7. Relacione dados contábeis com decisões de negócio
 
+📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
+• Nosso telefone de contato é: (14) 99879-7126
+• Se o cliente pedir telefone, forneça EXATAMENTE este número
+• NUNCA invente ou altere este número
+
 🚫 PROIBIDO:
-• NUNCA invente telefones, e-mails, endereços ou dados de contato
-• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
-• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+• NUNCA invente e-mails, endereços ou outros dados de contato
+• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
 
 ⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
     },
@@ -251,10 +270,14 @@ AGENTES = {
 6. Explique custos envolvidos quando perguntado
 7. Seja paciente — processos societários geram ansiedade
 
+📞 TELEFONE DO ESCRITÓRIO (USE SEMPRE ESTE NÚMERO):
+• Nosso telefone de contato é: (14) 99879-7126
+• Se o cliente pedir telefone, forneça EXATAMENTE este número
+• NUNCA invente ou altere este número
+
 🚫 PROIBIDO:
-• NUNCA invente telefones, e-mails, endereços ou dados de contato
-• NUNCA diga "ligue para" ou "nosso telefone é" — você não tem essa informação
-• Se o cliente pedir telefone, diga que um contador entrará em contato em breve ou use o Telegram
+• NUNCA invente e-mails, endereços ou outros dados de contato
+• NUNCA diga que não tem telefone ou que um contador vai ligar — forneça o número (14) 99879-7126
 
 ⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
     }
