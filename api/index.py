@@ -3,7 +3,6 @@ import os
 import json
 import urllib.request
 import urllib.error
-import re
 
 app = Flask(__name__)
 
@@ -17,23 +16,32 @@ PALAVRAS_CHAVE = {
     "fiscal": [
         "imposto", "impostos", "das", "darf", "gps", "guia", "guias", "sef", "rfb", "sped",
         "efd", "ecd", "ecf", "nota fiscal", "nfe", "cfop", "cst", "icms", "ipi", "pis",
-        "cofins", "irpj", "csll", "simples", "presumido", "real", "tributação", "fiscal"
+        "cofins", "irpj", "csll", "simples", "presumido", "real", "tributação", "tributacao",
+        "fiscal", "obrigação", "obrigacao", "acessória", "acessoria", "declaração", "declaracao",
+        "pagamento", "recolhimento", "aliquota", "alíquota", "base de calculo", "base de cálculo"
     ],
     "dp_rh": [
         "folha", "pagamento", "esocial", "social", "férias", "ferias", "rescisão", "rescisao",
         "admissão", "admissao", "demissão", "demissao", "inss", "fgts", "trabalhista", "clt",
-        "convenção", "dissídio", "dissidio", "ppp", "rais", "dirf", "gfip", "funcionário",
-        "funcionario", "empregado", "salário", "salario", "holerite", "contra-cheque"
+        "convenção", "convencao", "dissídio", "dissidio", "ppp", "rais", "dirf", "gfip",
+        "funcionário", "funcionario", "empregado", "salário", "salario", "holerite", "contra-cheque",
+        "trabalhador", "empregador", "férias", "ferias", "13º", "decimo", "decimo terceiro",
+        "hora extra", "adicional", "insalubridade", "periculosidade", "vt", "vr", "va"
     ],
     "contabil": [
         "balanço", "balanco", "dre", "livro", "livros", "contábil", "contabil", "escrituração",
         "escrituracao", "conciliação", "conciliacao", "contas", "custo", "custos", "financeiro",
-        "indicador", "demonstração", "demonstracao", "patrimonial", "ativo", "passivo"
+        "indicador", "demonstração", "demonstracao", "patrimonial", "ativo", "passivo",
+        "receita", "despesa", "lucro", "prejuízo", "prejuizo", "caixa", "bancário", "bancario",
+        "depreciação", "depreciacao", "estoque", "inventário", "inventario", "razão", "razao"
     ],
     "societario": [
         "abertura", "abrir", "encerramento", "encerrar", "alteração", "alteracao", "baixa",
         "certidão", "certidao", "negativa", "jucesp", "contrato", "sócio", "socio", "cnae",
-        "capital social", "regularização", "regularizacao", "inativa", "mei", "empresa"
+        "capital social", "regularização", "regularizacao", "inativa", "mei", "empresa",
+        "constituição", "constituicao", "sociedade", "ltDA", "eireli", "me", "epp",
+        "enquadramento", "enquadramento", "simples", "lucro presumido", "lucro real",
+        "registro", "junta comercial", "receita federal", "prefeitura", "alvará", "alvara"
     ]
 }
 
@@ -46,14 +54,14 @@ AGENTES = {
 
 🎯 SEU TRABALHO:
 1. Cumprimente o cliente de forma calorosa
-2. Identifique o tipo de demanda e DIRECIONE para o especialista:
+2. Identifique o tipo de demanda:
    • 📊 FISCAL → Dúvidas sobre impostos, DAS, guias, SEF, RFB, obrigações acessórias
    • 👥 DP/RH → Folha de pagamento, eSocial, férias, rescisões, INSS, FGTS
    • 📈 CONTÁBIL → Balanço, DRE, livros contábeis, escrituração, análise financeira
    • 🏢 SOCIETÁRIO → Abertura, alteração, encerramento de empresas, certidões, contratos
 3. Colete: nome, CNPJ/CPF, e-mail
 4. Informe que o especialista vai assumir o atendimento
-5. Seja breve e objetiva na triagem
+5. Seja breve e objetiva
 
 ⚠️ IMPORTANTE: Não resolva dúvidas técnicas. Só classifique e transfira."""
     },
@@ -72,11 +80,13 @@ AGENTES = {
 • Dúvidas sobre notas fiscais, CFOP, CST
 
 📝 REGRAS:
-1. Seja técnico mas didático
-2. Explique o "porquê" das orientações
-3. Sempre confirme CNPJ da empresa
-4. Se não souber algo, diga que vai consultar o contador responsável
-5. Ao final, pergunte se precisa de mais alguma coisa
+1. SEMPRE dê as boas-vindas ao assumir o atendimento
+2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
+3. Seja técnico mas didático
+4. Explique o "porquê" das orientações
+5. Sempre confirme CNPJ da empresa
+6. Se não souber algo, diga que vai consultar o contador responsável
+7. Ao final, pergunte se precisa de mais alguma coisa
 
 ⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
     },
@@ -95,11 +105,13 @@ AGENTES = {
 • PPP, RAIS, DIRF, GFIP
 
 📝 REGRAS:
-1. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
-2. Explique os cálculos quando solicitado
-3. Sempre peça a quantidade de funcionários
-4. Oriente sobre documentos necessários
-5. Seja empático com questões trabalhistas sensíveis
+1. SEMPRE dê as boas-vindas ao assumir o atendimento
+2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
+3. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
+4. Explique os cálculos quando solicitado
+5. Sempre peça a quantidade de funcionários
+6. Oriente sobre documentos necessários
+7. Seja empático com questões trabalhistas sensíveis
 
 ⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
     },
@@ -119,11 +131,13 @@ AGENTES = {
 • Planejamento financeiro
 
 📝 REGRAS:
-1. Use linguagem clara, evite jargões excessivos
-2. Explique a importância de cada demonstração
-3. Oriente sobre prazos de entrega dos livros
-4. Sugira melhorias quando apropriado
-5. Relacione dados contábeis com decisões de negócio
+1. SEMPRE dê as boas-vindas ao assumir o atendimento
+2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
+3. Use linguagem clara, evite jargões excessivos
+4. Explique a importância de cada demonstração
+5. Oriente sobre prazos de entrega dos livros
+6. Sugira melhorias quando apropriado
+7. Relacione dados contábeis com decisões de negócio
 
 ⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
     },
@@ -143,11 +157,13 @@ AGENTES = {
 • Regularização de empresas inativas
 
 📝 REGRAS:
-1. Explique o passo a passo de cada processo
-2. Informe documentos necessários com antecedência
-3. Dê prazos realistas (abertura: 5-15 dias úteis)
-4. Explique custos envolvidos quando perguntado
-5. Seja paciente — processos societários geram ansiedade
+1. SEMPRE dê as boas-vindas ao assumir o atendimento
+2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
+3. Explique o passo a passo de cada processo
+4. Informe documentos necessários com antecedência
+5. Dê prazos realistas (abertura: 5-15 dias úteis)
+6. Explique custos envolvidos quando perguntado
+7. Seja paciente — processos societários geram ansiedade
 
 ⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
     }
@@ -169,8 +185,8 @@ def after_request(response):
 def home():
     return jsonify({
         "status": "online",
-        "service": "Caio Contábil - Multi-Agente API v4.1",
-        "version": "4.1.0",
+        "service": "Caio Contábil - Multi-Agente API v4.2",
+        "version": "4.2.0",
         "agentes": list(AGENTES.keys())
     })
 
@@ -182,8 +198,8 @@ def chat():
     if request.method == 'GET':
         return jsonify({
             "status": "online",
-            "service": "Caio Contábil - Multi-Agente API v4.1",
-            "version": "4.1.0"
+            "service": "Caio Contábil - Multi-Agente API v4.2",
+            "version": "4.2.0"
         })
 
     try:
@@ -200,60 +216,58 @@ def chat():
                 "agente_atual": "triagem",
                 "historico": [],
                 "dados_cliente": {},
-                "primeira_msg": True
+                "msg_count": 0,
+                "agente_detectado": None
             }
 
         sessao = sessions[session_id]
+        sessao["msg_count"] += 1
 
-        # 1. ROUTING por palavras-chave (rápido, sem API)
-        novo_agente = detectar_agente_por_palavras(message, sessao["agente_atual"])
+        # 1. DETECTA AGENTE por palavras-chave
+        agente_detectado = detectar_agente_por_palavras(message)
 
-        # 2. Se for primeira mensagem ou não detectou agente, usa triagem
-        if sessao["primeira_msg"] or novo_agente is None:
-            sessao["primeira_msg"] = False
-            agente_key = "triagem"
-        else:
-            agente_key = novo_agente
+        # 2. LÓGICA DE TRANSFERÊNCIA
+        agente_key = sessao["agente_atual"]
+        transferencia = False
 
-        # 3. Se mudou de agente, avisa
-        transferencia = ""
-        if agente_key != sessao["agente_atual"] and sessao["agente_atual"] != "triagem":
-            transferencia = f"{AGENTES[agente_key]['emoji']} **Transferindo para o {AGENTES[agente_key]['nome']}**...\n\n"
+        # Se detectou agente específico e está na triagem → TRANSFERE
+        if agente_detectado and sessao["agente_atual"] == "triagem":
+            agente_key = agente_detectado
+            sessao["agente_atual"] = agente_key
+            sessao["agente_detectado"] = agente_detectado
+            transferencia = True
 
-        sessao["agente_atual"] = agente_key
+        # Se detectou agente diferente do atual → TRANSFERE
+        elif agente_detectado and agente_detectado != sessao["agente_atual"]:
+            agente_key = agente_detectado
+            sessao["agente_atual"] = agente_key
+            transferencia = True
 
-        # 4. Chama Gemini UMA VEZ com o prompt do agente
-        reply = call_gemini_agent(message, agente_key, sessao["historico"])
+        # 3. Chama Gemini com o agente correto
+        reply = call_gemini_agent(message, agente_key, sessao["historico"], transferencia)
 
-        if transferencia:
-            reply = transferencia + reply
-
-        # 5. Salva histórico
+        # 4. Salva histórico
         sessao["historico"].append({"role": "user", "text": message})
         sessao["historico"].append({"role": "model", "text": reply})
 
-        # 6. Notifica Telegram
+        # 5. Notifica Telegram
         notify_telegram(session_id, message, reply, agente_key)
 
         return jsonify({
             "reply": reply,
             "session_id": session_id,
             "agente": agente_key,
-            "agente_nome": AGENTES[agente_key]["nome"]
+            "agente_nome": AGENTES[agente_key]["nome"],
+            "transferencia": transferencia
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ========== DETECTAR AGENTE POR PALAVRAS-CHAVE ==========
-def detectar_agente_por_palavras(message, agente_atual):
-    """Detecta o agente correto baseado em palavras-chave na mensagem."""
+# ========== DETECTAR AGENTE ==========
+def detectar_agente_por_palavras(message):
+    """Detecta o agente correto baseado em palavras-chave."""
 
-    # Se está na triagem, deixa o Gemini decidir na primeira resposta
-    if agente_atual == "triagem":
-        return None
-
-    # Verifica palavras-chave em cada categoria
     pontuacao = {"fiscal": 0, "dp_rh": 0, "contabil": 0, "societario": 0}
 
     for categoria, palavras in PALAVRAS_CHAVE.items():
@@ -261,18 +275,16 @@ def detectar_agente_por_palavras(message, agente_atual):
             if palavra in message:
                 pontuacao[categoria] += 1
 
-    # Se detectou palavras de outra categoria, muda
     max_pontos = max(pontuacao.values())
     if max_pontos > 0:
         for cat, pts in pontuacao.items():
-            if pts == max_pontos and cat != agente_atual:
+            if pts == max_pontos:
                 return cat
 
-    # Mantém o agente atual se não detectou mudança
-    return agente_atual
+    return None
 
 # ========== CHAMAR AGENTE ==========
-def call_gemini_agent(message, agente_key, historico):
+def call_gemini_agent(message, agente_key, historico, transferencia=False):
     if not GEMINI_API_KEY:
         return "⚠️ API do Gemini não configurada. Entre em contato pelo Telegram."
 
@@ -282,7 +294,16 @@ def call_gemini_agent(message, agente_key, historico):
     # Monta o contexto
     contents = [{"role": "user", "parts": [{"text": agente["prompt"]}]}]
 
-    for msg in historico[-6:]:  # Mantém últimas 6 mensagens
+    # Se for transferência, adiciona contexto da conversa anterior
+    if transferencia and len(historico) > 0:
+        transfer_context = "Você está assumindo este atendimento agora. A conversa anterior foi:\n"
+        for msg in historico[-4:]:
+            quem = "Cliente" if msg["role"] == "user" else "Ana (triagem)"
+            transfer_context += f"{quem}: {msg['text']}\n"
+        transfer_context += "\nAgora você deve dar as boas-vindas ao cliente e perguntar como pode ajudá-lo."
+        contents.append({"role": "user", "parts": [{"text": transfer_context}]})
+
+    for msg in historico[-6:]:
         role = "user" if msg["role"] == "user" else "model"
         contents.append({"role": role, "parts": [{"text": msg["text"]}]})
 
@@ -296,6 +317,12 @@ def call_gemini_agent(message, agente_key, historico):
         with urllib.request.urlopen(req, timeout=20) as response:
             result = json.loads(response.read().decode('utf-8'))
             reply = result["candidates"][0]["content"]["parts"][0]["text"]
+
+            # Se for transferência, adiciona prefixo visual
+            if transferencia:
+                prefixo = f"{agente['emoji']} **{agente['nome']}** assumindo o atendimento...\n\n"
+                reply = prefixo + reply
+
             return reply
     except urllib.error.HTTPError as e:
         return f"⚠️ Erro na API ({e.code}). Um contador será notificado."
@@ -308,9 +335,10 @@ def notify_telegram(session_id, message, reply, agente):
         return
 
     agente_nome = AGENTES.get(agente, {}).get("nome", agente)
+    emoji = AGENTES.get(agente, {}).get("emoji", "🤖")
 
     text = (
-        f"🚨 <b>Novo atendimento - {agente_nome}</b>\n"
+        f"{emoji} <b>{agente_nome}</b>\n"
         f"🆔 Sessão: <code>{session_id}</code>\n"
         f"👤 Cliente: {message[:100]}\n"
         f"🤖 Bot: {reply[:200]}"
