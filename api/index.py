@@ -49,7 +49,7 @@ def home():
     return jsonify({
         "status": "online",
         "service": "Caio Contábil - Chatbot API",
-        "version": "3.0.0"
+        "version": "3.1.0"
     })
 
 @app.route('/chat', methods=['GET', 'POST', 'OPTIONS'])
@@ -61,7 +61,7 @@ def chat():
         return jsonify({
             "status": "online",
             "service": "Caio Contábil - Chatbot API",
-            "version": "3.0.0"
+            "version": "3.1.0"
         })
 
     # POST
@@ -89,7 +89,8 @@ def call_gemini(message, session_id):
     if not GEMINI_API_KEY:
         return "⚠️ API do Gemini não configurada. Entre em contato pelo Telegram."
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # Modelo atualizado para Gemini 3.5 Flash (disponível em 2026)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     history = sessions.get(session_id, [])
     contents = [{"role": "user", "parts": [{"text": SYSTEM_PROMPT}]}]
@@ -120,6 +121,8 @@ def call_gemini(message, session_id):
 
             return reply
     except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        print(f"Erro Gemini HTTP {e.code}: {error_body}")
         return f"⚠️ Erro na API do Gemini ({e.code}). Um contador será notificado."
     except Exception:
         return "⚠️ Erro de conexão. Um contador será notificado em breve."
