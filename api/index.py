@@ -3,6 +3,8 @@ import os
 import json
 import urllib.request
 import urllib.error
+import time
+import random
 
 app = Flask(__name__)
 
@@ -18,7 +20,14 @@ PALAVRAS_CHAVE = {
         "efd", "ecd", "ecf", "nota fiscal", "nfe", "cfop", "cst", "icms", "ipi", "pis",
         "cofins", "irpj", "csll", "simples", "presumido", "real", "tributação", "tributacao",
         "fiscal", "obrigação", "obrigacao", "acessória", "acessoria", "declaração", "declaracao",
-        "pagamento", "recolhimento", "aliquota", "alíquota", "base de calculo", "base de cálculo"
+        "pagamento", "recolhimento", "aliquota", "alíquota", "base de calculo", "base de cálculo",
+        "iss", "iptu", "itbi", "iof", "cide", "contribuição", "contribuicao", "receita federal",
+        "estadual", "municipal", "sintegra", "gnre", "sefaz", "suframa", "importação", "importacao",
+        "exportação", "exportacao", "custo", "despesa", "dedução", "deducao", "crédito", "credito",
+        "enquadramento", "anexo", "fator r", "fatorr", "retencao", "retenção", "substituição",
+        "substituicao", "tributario", "tributário", "icms st", "diferimento", "diferimento",
+        "apuração", "apuracao", "apurar", "apurado", "apurados", "periodo", "período",
+        "mensal", "trimestral", "anual", "semestral", "apuracao", "apuração", "apurar"
     ],
     "dp_rh": [
         "folha", "pagamento", "esocial", "social", "férias", "ferias", "rescisão", "rescisao",
@@ -26,23 +35,80 @@ PALAVRAS_CHAVE = {
         "convenção", "convencao", "dissídio", "dissidio", "ppp", "rais", "dirf", "gfip",
         "funcionário", "funcionario", "empregado", "salário", "salario", "holerite", "contra-cheque",
         "trabalhador", "empregador", "férias", "ferias", "13º", "decimo", "decimo terceiro",
-        "hora extra", "adicional", "insalubridade", "periculosidade", "vt", "vr", "va"
+        "hora extra", "adicional", "insalubridade", "periculosidade", "vt", "vr", "va",
+        "homologação", "homologacao", "aviso prévio", "aviso previo", "justa causa", "justa-causa",
+        "sem justa", "despido", "dispensado", "demissão", "demissao", "exoneracao", "exoneração",
+        "estagiário", "estagiario", "pj", "mei funcionario", "pessoa jurídica", "trabalhador",
+        "emprego", "vaga", "contratação", "contratacao", "admitir", "demitir", "exonerar",
+        "falta", "atestado", "licença", "licenca", "maternidade", "paternidade", "doença",
+        "doenca", "acidente", "trabalho", "seguro", "desemprego", "seguro desemprego",
+        "vale transporte", "vale refeição", "vale alimentação", "cesta", "ticket", "beneficio",
+        "benefício", "plano de saude", "plano de saúde", "odontologico", "odontológico",
+        "previdencia", "previdência", "aposentadoria", "pensão", "pensao", "dependente",
+        "irrf", "imposto renda", "imposto de renda", "dedução dependente", "deducao dependente"
     ],
     "contabil": [
         "balanço", "balanco", "dre", "livro", "livros", "contábil", "contabil", "escrituração",
         "escrituracao", "conciliação", "conciliacao", "contas", "custo", "custos", "financeiro",
         "indicador", "demonstração", "demonstracao", "patrimonial", "ativo", "passivo",
         "receita", "despesa", "lucro", "prejuízo", "prejuizo", "caixa", "bancário", "bancario",
-        "depreciação", "depreciacao", "estoque", "inventário", "inventario", "razão", "razao"
+        "depreciação", "depreciacao", "estoque", "inventário", "inventario", "razão", "razao",
+        "contábeis", "contabeis", "escriturar", "lancamento", "lançamento", "partida dobrada",
+        "debito", "débito", "credito", "crédito", "plano de contas", "balancete", "balancete",
+        "verificação", "verificacao", "razonete", "razonetes", "t", "conta", "contas",
+        "fornecedor", "cliente", "banco", "caixa", "tesouraria", "tesouraria", "fluxo",
+        "fluxo de caixa", "demonstração do resultado", "demonstracao do resultado",
+        "patrimonio liquido", "patrimônio líquido", "capital", "reserva", "lucros",
+        "lucros acumulados", "prejuizos", "prejuízos", "dividendos", "juros", "capital",
+        "giro", "prazo medio", "prazo médio", "rotatividade", "rentabilidade", "margem",
+        "ebitda", "ebit", "noi", "roi", "roe", "roa", "payback", "break-even", "ponto de equilibrio",
+        "análise", "analise", "horizontal", "vertical", "comparativo", "comparativa"
     ],
     "societario": [
         "abertura", "abrir", "encerramento", "encerrar", "alteração", "alteracao", "baixa",
         "certidão", "certidao", "negativa", "jucesp", "contrato", "sócio", "socio", "cnae",
         "capital social", "regularização", "regularizacao", "inativa", "mei", "empresa",
-        "constituição", "constituicao", "sociedade", "ltDA", "eireli", "me", "epp",
-        "enquadramento", "enquadramento", "simples", "lucro presumido", "lucro real",
-        "registro", "junta comercial", "receita federal", "prefeitura", "alvará", "alvara"
+        "constituição", "constituicao", "sociedade", "ltda", "eireli", "me", "epp",
+        "enquadramento", "simples", "lucro presumido", "lucro real",
+        "registro", "junta comercial", "receita federal", "prefeitura", "alvará", "alvara",
+        "inscrição", "inscricao", "cnpj", "cpf", "razao social", "razão social", "fantasia",
+        "nome fantasia", "endereço", "endereco", "sede", "filial", "matriz", "transformação",
+        "transformacao", "fusão", "fusao", "cisão", "cisao", "incorporação", "incorporacao",
+        "extinção", "extincao", "dissolução", "dissolucao", "liquidacao", "liquidação",
+        "arquivamento", "arquivamento", "reabertura", "reabrir", "reorganização", "reorganizacao",
+        "holding", "patrimonial", "participação", "participacao", "quotas", "ações", "acoes",
+        "capital", "quota", "quotas", "sócios", "socios", "administrador", "diretor",
+        "presidente", "vice", "conselho", "assembleia", "ata", "reunião", "reuniao",
+        "protocolo", "registro", "cartório", "cartorio", "tabelião", "tabeliao",
+        "procuração", "procuracao", "mandato", "representação", "representacao"
     ]
+}
+
+# ========== MENSAGENS DE BOAS-VINDAS POR AGENTE (fallback) ==========
+BOAS_VINDAS = {
+    "triagem": "Olá! 😊 Bem-vindo ao atendimento da Caio Contábil. Sou a Ana, sua assistente virtual de triagem.
+
+Para te direcionar ao contador certo, me conta: você precisa de ajuda com dúvida fiscal, folha de pagamento, contabilidade, ou abertura/alteração de empresa?",
+    "fiscal": "📊 **Especialista Fiscal** assumindo o atendimento...
+
+Olá! Sou o Especialista Fiscal da Caio Contábil. Estou aqui para ajudar com suas dúvidas sobre impostos, guias, obrigações acessórias e toda a parte tributária.
+
+Em que posso ajudá-lo? 😊",
+    "dp_rh": "👥 **Especialista DP/RH** assumindo o atendimento...
+
+Olá! Sou o Especialista de Departamento Pessoal da Caio Contábil. Estou aqui para ajudar com folha de pagamento, eSocial, férias, rescisões e toda a parte trabalhista.
+
+Em que posso ajudá-lo? 😊",
+    "contabil": "📈 **Especialista Contábil** assumindo o atendimento...
+
+Olá! Sou o Especialista Contábil da Caio Contábil. Estou aqui para ajudar com balanço, DRE, livros contábeis, escrituração e análise financeira.
+
+Em que posso ajudá-lo? 😊",
+    "societario": "🏢 **Especialista Societário** assumindo o atendimento...
+
+Olá! Sou o Especialista Societário da Caio Contábil. Estou aqui para ajudar com abertura, alteração, encerramento de empresas, certidões e contratos.
+
+Em que posso ajudá-lo? 😊"
 }
 
 # ========== PROMPTS DOS AGENTES ==========
@@ -185,8 +251,8 @@ def after_request(response):
 def home():
     return jsonify({
         "status": "online",
-        "service": "Caio Contábil - Multi-Agente API v4.2",
-        "version": "4.2.0",
+        "service": "Caio Contábil - Multi-Agente API v5.0",
+        "version": "5.0.0",
         "agentes": list(AGENTES.keys())
     })
 
@@ -198,8 +264,8 @@ def chat():
     if request.method == 'GET':
         return jsonify({
             "status": "online",
-            "service": "Caio Contábil - Multi-Agente API v4.2",
-            "version": "4.2.0"
+            "service": "Caio Contábil - Multi-Agente API v5.0",
+            "version": "5.0.0"
         })
 
     try:
@@ -215,9 +281,9 @@ def chat():
             sessions[session_id] = {
                 "agente_atual": "triagem",
                 "historico": [],
-                "dados_cliente": {},
                 "msg_count": 0,
-                "agente_detectado": None
+                "transferencia_pendente": False,
+                "agente_destino": None
             }
 
         sessao = sessions[session_id]
@@ -230,27 +296,34 @@ def chat():
         agente_key = sessao["agente_atual"]
         transferencia = False
 
-        # Se detectou agente específico e está na triagem → TRANSFERE
-        if agente_detectado and sessao["agente_atual"] == "triagem":
-            agente_key = agente_detectado
-            sessao["agente_atual"] = agente_key
-            sessao["agente_detectado"] = agente_detectado
-            transferencia = True
+        # Se detectou agente específico
+        if agente_detectado:
+            # Se está na triagem → TRANSFERE para o agente detectado
+            if sessao["agente_atual"] == "triagem":
+                agente_key = agente_detectado
+                sessao["agente_atual"] = agente_key
+                transferencia = True
+            # Se já está com outro agente e detectou diferente → TRANSFERE
+            elif agente_detectado != sessao["agente_atual"]:
+                agente_key = agente_detectado
+                sessao["agente_atual"] = agente_key
+                transferencia = True
 
-        # Se detectou agente diferente do atual → TRANSFERE
-        elif agente_detectado and agente_detectado != sessao["agente_atual"]:
-            agente_key = agente_detectado
-            sessao["agente_atual"] = agente_key
-            transferencia = True
+        # 3. Chama Gemini com retry para rate limit
+        reply = call_gemini_com_retry(message, agente_key, sessao["historico"], transferencia)
 
-        # 3. Chama Gemini com o agente correto
-        reply = call_gemini_agent(message, agente_key, sessao["historico"], transferencia)
+        # 4. Se Gemini falhou completamente, usa fallback
+        if reply.startswith("⚠️"):
+            if transferencia:
+                reply = BOAS_VINDAS.get(agente_key, BOAS_VINDAS["triagem"])
+            else:
+                reply = f"Olá! Sou o {AGENTES[agente_key]['nome']}. Em que posso ajudá-lo? 😊"
 
-        # 4. Salva histórico
+        # 5. Salva histórico
         sessao["historico"].append({"role": "user", "text": message})
         sessao["historico"].append({"role": "model", "text": reply})
 
-        # 5. Notifica Telegram
+        # 6. Notifica Telegram
         notify_telegram(session_id, message, reply, agente_key)
 
         return jsonify({
@@ -283,10 +356,12 @@ def detectar_agente_por_palavras(message):
 
     return None
 
-# ========== CHAMAR AGENTE ==========
-def call_gemini_agent(message, agente_key, historico, transferencia=False):
+# ========== CHAMAR GEMINI COM RETRY (trata erro 429) ==========
+def call_gemini_com_retry(message, agente_key, historico, transferencia=False, max_retries=3):
+    """Chama Gemini com retry exponencial para rate limit (429)."""
+
     if not GEMINI_API_KEY:
-        return "⚠️ API do Gemini não configurada. Entre em contato pelo Telegram."
+        return "⚠️ API do Gemini não configurada."
 
     agente = AGENTES[agente_key]
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -294,7 +369,7 @@ def call_gemini_agent(message, agente_key, historico, transferencia=False):
     # Monta o contexto
     contents = [{"role": "user", "parts": [{"text": agente["prompt"]}]}]
 
-    # Se for transferência, adiciona contexto da conversa anterior
+    # Se for transferência, adiciona contexto
     if transferencia and len(historico) > 0:
         transfer_context = "Você está assumindo este atendimento agora. A conversa anterior foi:\n"
         for msg in historico[-4:]:
@@ -311,23 +386,38 @@ def call_gemini_agent(message, agente_key, historico, transferencia=False):
 
     data = json.dumps({"contents": contents}).encode('utf-8')
 
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    # Retry com backoff exponencial
+    for tentativa in range(max_retries):
+        try:
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
 
-    try:
-        with urllib.request.urlopen(req, timeout=20) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            reply = result["candidates"][0]["content"]["parts"][0]["text"]
+            with urllib.request.urlopen(req, timeout=25) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                reply = result["candidates"][0]["content"]["parts"][0]["text"]
 
-            # Se for transferência, adiciona prefixo visual
-            if transferencia:
-                prefixo = f"{agente['emoji']} **{agente['nome']}** assumindo o atendimento...\n\n"
-                reply = prefixo + reply
+                # Se for transferência, adiciona prefixo visual
+                if transferencia:
+                    prefixo = f"{agente['emoji']} **{agente['nome']}** assumindo o atendimento...\n\n"
+                    reply = prefixo + reply
 
-            return reply
-    except urllib.error.HTTPError as e:
-        return f"⚠️ Erro na API ({e.code}). Um contador será notificado."
-    except Exception:
-        return "⚠️ Erro de conexão. Um contador será notificado em breve."
+                return reply
+
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                # Rate limit - espera e tenta de novo
+                wait_time = (2 ** tentativa) + random.uniform(0, 1)
+                print(f"Rate limit (429). Tentativa {tentativa + 1}/{max_retries}. Aguardando {wait_time:.1f}s...")
+                time.sleep(wait_time)
+                continue
+            else:
+                print(f"Erro HTTP {e.code}")
+                return f"⚠️ Erro na API ({e.code})."
+        except Exception as ex:
+            print(f"Erro de conexão: {ex}")
+            return "⚠️ Erro de conexão."
+
+    # Se esgotou as tentativas
+    return "⚠️ Servidor ocupado. Tente novamente em alguns segundos."
 
 # ========== TELEGRAM ==========
 def notify_telegram(session_id, message, reply, agente):
