@@ -1,2 +1,1 @@
-# Nenhuma dependência externa necessária!
-# Usamos apenas bibliotecas padrão do Python (urllib, json, http)
+flask
