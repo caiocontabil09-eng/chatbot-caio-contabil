@@ -3,6 +3,7 @@ import os
 import json
 import urllib.request
 import urllib.error
+import re
 
 app = Flask(__name__)
 
@@ -11,12 +12,36 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-# ========== AGENTES ==========
+# ========== PALAVRAS-CHAVE PARA ROUTING ==========
+PALAVRAS_CHAVE = {
+    "fiscal": [
+        "imposto", "impostos", "das", "darf", "gps", "guia", "guias", "sef", "rfb", "sped",
+        "efd", "ecd", "ecf", "nota fiscal", "nfe", "cfop", "cst", "icms", "ipi", "pis",
+        "cofins", "irpj", "csll", "simples", "presumido", "real", "tributação", "fiscal"
+    ],
+    "dp_rh": [
+        "folha", "pagamento", "esocial", "social", "férias", "ferias", "rescisão", "rescisao",
+        "admissão", "admissao", "demissão", "demissao", "inss", "fgts", "trabalhista", "clt",
+        "convenção", "dissídio", "dissidio", "ppp", "rais", "dirf", "gfip", "funcionário",
+        "funcionario", "empregado", "salário", "salario", "holerite", "contra-cheque"
+    ],
+    "contabil": [
+        "balanço", "balanco", "dre", "livro", "livros", "contábil", "contabil", "escrituração",
+        "escrituracao", "conciliação", "conciliacao", "contas", "custo", "custos", "financeiro",
+        "indicador", "demonstração", "demonstracao", "patrimonial", "ativo", "passivo"
+    ],
+    "societario": [
+        "abertura", "abrir", "encerramento", "encerrar", "alteração", "alteracao", "baixa",
+        "certidão", "certidao", "negativa", "jucesp", "contrato", "sócio", "socio", "cnae",
+        "capital social", "regularização", "regularizacao", "inativa", "mei", "empresa"
+    ]
+}
+
+# ========== PROMPTS DOS AGENTES ==========
 AGENTES = {
     "triagem": {
         "nome": "Ana",
         "emoji": "🤖",
-        "descricao": "Assistente de triagem que classifica a demanda e direciona ao especialista correto",
         "prompt": """Você é "Ana", assistente virtual de triagem da Caio Contábil LTDA.
 
 🎯 SEU TRABALHO:
@@ -36,7 +61,6 @@ AGENTES = {
     "fiscal": {
         "nome": "Especialista Fiscal",
         "emoji": "📊",
-        "descricao": "Especialista em tributação, impostos e obrigações fiscais",
         "prompt": """Você é o "Especialista Fiscal" da Caio Contábil LTDA.
 
 📊 SUA ESPECIALIDADE:
@@ -60,7 +84,6 @@ AGENTES = {
     "dp_rh": {
         "nome": "Especialista DP/RH",
         "emoji": "👥",
-        "descricao": "Especialista em departamento pessoal, folha e eSocial",
         "prompt": """Você é o "Especialista de DP/RH" da Caio Contábil LTDA.
 
 👥 SUA ESPECIALIDADE:
@@ -84,7 +107,6 @@ AGENTES = {
     "contabil": {
         "nome": "Especialista Contábil",
         "emoji": "📈",
-        "descricao": "Especialista em contabilidade, balanços e análise financeira",
         "prompt": """Você é o "Especialista Contábil" da Caio Contábil LTDA.
 
 📈 SUA ESPECIALIDADE:
@@ -109,7 +131,6 @@ AGENTES = {
     "societario": {
         "nome": "Especialista Societário",
         "emoji": "🏢",
-        "descricao": "Especialista em abertura, alteração e encerramento de empresas",
         "prompt": """Você é o "Especialista Societário" da Caio Contábil LTDA.
 
 🏢 SUA ESPECIALIDADE:
@@ -132,19 +153,7 @@ AGENTES = {
     }
 }
 
-# ========== PROMPT DE ROUTING (decide qual agente responde) ==========
-ROUTING_PROMPT = """Você é o sistema de roteamento inteligente da Caio Contábil.
-
-Analise a mensagem do cliente e classifique em UMA destas categorias:
-• TRIAGEM → Se for primeira mensagem, saudação, ou pedido geral de ajuda
-• FISCAL → Impostos, DAS, guias, SEF, RFB, notas fiscais, SPED, obrigações acessórias
-• DP_RH → Folha, eSocial, férias, rescisão, admissão, INSS, FGTS, trabalhista
-• CONTABIL → Balanço, DRE, livros contábeis, escrituração, conciliação, custos
-• SOCIETARIO → Abertura, alteração, encerramento, certidões, contratos, JUCESP
-
-Responda APENAS com o código da categoria (ex: FISCAL). Nada mais."""
-
-# ========== HISTÓRICO DE SESSÕES ==========
+# ========== HISTÓRICO ==========
 sessions = {}
 
 # ========== CORS ==========
@@ -160,8 +169,8 @@ def after_request(response):
 def home():
     return jsonify({
         "status": "online",
-        "service": "Caio Contábil - Multi-Agente API",
-        "version": "4.0.0",
+        "service": "Caio Contábil - Multi-Agente API v4.1",
+        "version": "4.1.0",
         "agentes": list(AGENTES.keys())
     })
 
@@ -173,120 +182,96 @@ def chat():
     if request.method == 'GET':
         return jsonify({
             "status": "online",
-            "service": "Caio Contábil - Multi-Agente API",
-            "version": "4.0.0"
+            "service": "Caio Contábil - Multi-Agente API v4.1",
+            "version": "4.1.0"
         })
 
-    # POST
     try:
         data = request.get_json() or {}
-        message = data.get("message", "").strip()
+        message = data.get("message", "").strip().lower()
         session_id = data.get("session_id", "default")
 
         if not message:
             return jsonify({"error": "Mensagem vazia"}), 400
 
-        # Inicializa sessão se não existir
+        # Inicializa sessão
         if session_id not in sessions:
             sessions[session_id] = {
                 "agente_atual": "triagem",
                 "historico": [],
-                "dados_cliente": {}
+                "dados_cliente": {},
+                "primeira_msg": True
             }
 
         sessao = sessions[session_id]
 
-        # 1. Verifica se houve mudança de assunto (routing)
-        novo_agente = detectar_mudanca_assunto(message, sessao["agente_atual"])
+        # 1. ROUTING por palavras-chave (rápido, sem API)
+        novo_agente = detectar_agente_por_palavras(message, sessao["agente_atual"])
 
-        if novo_agente and novo_agente != sessao["agente_atual"]:
-            # Transferência de agente
-            sessao["agente_atual"] = novo_agente
-            transfer_msg = f"{AGENTES[novo_agente]['emoji']} **Transferindo para o {AGENTES[novo_agente]['nome']}**..."
-
-            # Chama o novo agente
-            reply = call_gemini_agent(message, novo_agente, sessao["historico"])
-
-            reply = transfer_msg + "\n\n" + reply
+        # 2. Se for primeira mensagem ou não detectou agente, usa triagem
+        if sessao["primeira_msg"] or novo_agente is None:
+            sessao["primeira_msg"] = False
+            agente_key = "triagem"
         else:
-            # Continua com o agente atual
-            reply = call_gemini_agent(message, sessao["agente_atual"], sessao["historico"])
+            agente_key = novo_agente
 
-        # Salva no histórico
+        # 3. Se mudou de agente, avisa
+        transferencia = ""
+        if agente_key != sessao["agente_atual"] and sessao["agente_atual"] != "triagem":
+            transferencia = f"{AGENTES[agente_key]['emoji']} **Transferindo para o {AGENTES[agente_key]['nome']}**...\n\n"
+
+        sessao["agente_atual"] = agente_key
+
+        # 4. Chama Gemini UMA VEZ com o prompt do agente
+        reply = call_gemini_agent(message, agente_key, sessao["historico"])
+
+        if transferencia:
+            reply = transferencia + reply
+
+        # 5. Salva histórico
         sessao["historico"].append({"role": "user", "text": message})
         sessao["historico"].append({"role": "model", "text": reply})
 
-        # Notifica Telegram
-        notify_telegram(session_id, message, reply, sessao["agente_atual"])
+        # 6. Notifica Telegram
+        notify_telegram(session_id, message, reply, agente_key)
 
         return jsonify({
             "reply": reply,
             "session_id": session_id,
-            "agente": sessao["agente_atual"],
-            "agente_nome": AGENTES[sessao["agente_atual"]]["nome"]
+            "agente": agente_key,
+            "agente_nome": AGENTES[agente_key]["nome"]
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ========== DETECTAR MUDANÇA DE ASSUNTO ==========
-def detectar_mudanca_assunto(message, agente_atual):
-    """Verifica se o cliente mudou de assunto e precisa de outro agente."""
-    if not GEMINI_API_KEY:
-        return None
+# ========== DETECTAR AGENTE POR PALAVRAS-CHAVE ==========
+def detectar_agente_por_palavras(message, agente_atual):
+    """Detecta o agente correto baseado em palavras-chave na mensagem."""
 
-    # Se está na triagem, não precisa detectar
+    # Se está na triagem, deixa o Gemini decidir na primeira resposta
     if agente_atual == "triagem":
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # Verifica palavras-chave em cada categoria
+    pontuacao = {"fiscal": 0, "dp_rh": 0, "contabil": 0, "societario": 0}
 
-    prompt_check = f"""O cliente está conversando com o agente {agente_atual}.
-Mensagem do cliente: "{message}"
+    for categoria, palavras in PALAVRAS_CHAVE.items():
+        for palavra in palavras:
+            if palavra in message:
+                pontuacao[categoria] += 1
 
-Esta mensagem indica que o cliente quer mudar de assunto para outro departamento?
-Responda apenas SIM ou NÃO."""
+    # Se detectou palavras de outra categoria, muda
+    max_pontos = max(pontuacao.values())
+    if max_pontos > 0:
+        for cat, pts in pontuacao.items():
+            if pts == max_pontos and cat != agente_atual:
+                return cat
 
-    data = json.dumps({"contents": [{"role": "user", "parts": [{"text": prompt_check}]}]}).encode('utf-8')
+    # Mantém o agente atual se não detectou mudança
+    return agente_atual
 
-    try:
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=10) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            resposta = result["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-
-            if "SIM" in resposta:
-                # Faz o routing para descobrir o novo agente
-                return route_agent(message)
-    except Exception:
-        pass
-
-    return None
-
-# ========== ROUTING (escolhe o agente) ==========
-def route_agent(message):
-    """Classifica a mensagem e retorna o agente correto."""
-    if not GEMINI_API_KEY:
-        return "triagem"
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
-
-    data = json.dumps({"contents": [{"role": "user", "parts": [{"text": ROUTING_PROMPT + "\n\nMensagem: " + message}]}]}).encode('utf-8')
-
-    try:
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=10) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            categoria = result["candidates"][0]["content"]["parts"][0]["text"].strip().lower()
-
-            if categoria in AGENTES:
-                return categoria
-    except Exception:
-        pass
-
-    return "triagem"
-
-# ========== CHAMAR AGENTE ESPECÍFICO ==========
+# ========== CHAMAR AGENTE ==========
 def call_gemini_agent(message, agente_key, historico):
     if not GEMINI_API_KEY:
         return "⚠️ API do Gemini não configurada. Entre em contato pelo Telegram."
@@ -294,10 +279,10 @@ def call_gemini_agent(message, agente_key, historico):
     agente = AGENTES[agente_key]
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-    # Monta o contexto com o prompt do agente + histórico
+    # Monta o contexto
     contents = [{"role": "user", "parts": [{"text": agente["prompt"]}]}]
 
-    for msg in historico[-8:]:  # Mantém últimas 8 mensagens
+    for msg in historico[-6:]:  # Mantém últimas 6 mensagens
         role = "user" if msg["role"] == "user" else "model"
         contents.append({"role": role, "parts": [{"text": msg["text"]}]})
 
@@ -308,7 +293,7 @@ def call_gemini_agent(message, agente_key, historico):
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=20) as response:
             result = json.loads(response.read().decode('utf-8'))
             reply = result["candidates"][0]["content"]["parts"][0]["text"]
             return reply
