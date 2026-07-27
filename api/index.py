@@ -17,6 +17,22 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 # ========== DADOS OFICIAIS DO ESCRITÓRIO ==========
 TELEFONE_OFICIAL = "(14) 99879-7126"
 
+# ========== BASE DE CLIENTES DO ESCRITÓRIO ==========
+# ADICIONE/EDITE OS CLIENTES AQUI NO FORMATO:
+# "CNPJ_SEM_FORMATACAO": { "razao_social": "...", "regime": "...", "responsavel": "..." }
+CLIENTES_DB = {
+    "11377525000167": {
+        "razao_social": "EMPRESA EXEMPLO LTDA",
+        "nome_fantasia": "Exemplo",
+        "regime_tributario": "Simples Nacional",
+        "atividade": "Comércio varejista",
+        "responsavel": "João Silva",
+        "setor": "fiscal"
+    }
+    # Adicione mais clientes aqui:
+    # "12345678000190": { "razao_social": "...", ... },
+}
+
 # ========== PALAVRAS-CHAVE PARA ROUTING ==========
 PALAVRAS_CHAVE = {
     "fiscal": [
@@ -29,20 +45,20 @@ PALAVRAS_CHAVE = {
         "estadual", "municipal", "sintegra", "gnre", "sefaz", "suframa", "importação", "importacao",
         "exportação", "exportacao", "custo", "despesa", "dedução", "deducao", "crédito", "credito",
         "enquadramento", "anexo", "fator r", "fatorr", "retencao", "retenção", "substituição",
-        "substituicao", "tributario", "tributário", "icms st", "diferimento", "diferimento",
+        "substituicao", "tributario", "tributário", "icms st", "diferimento",
         "apuração", "apuracao", "apurar", "apurado", "apurados", "periodo", "período",
-        "mensal", "trimestral", "anual", "semestral", "apuracao", "apuração", "apurar"
+        "mensal", "trimestral", "anual", "semestral"
     ],
     "dp_rh": [
         "folha", "pagamento", "esocial", "social", "férias", "ferias", "rescisão", "rescisao",
         "admissão", "admissao", "demissão", "demissao", "inss", "fgts", "trabalhista", "clt",
         "convenção", "convencao", "dissídio", "dissidio", "ppp", "rais", "dirf", "gfip",
         "funcionário", "funcionario", "empregado", "salário", "salario", "holerite", "contra-cheque",
-        "trabalhador", "empregador", "férias", "ferias", "13º", "decimo", "decimo terceiro",
+        "trabalhador", "empregador", "13º", "decimo", "decimo terceiro",
         "hora extra", "adicional", "insalubridade", "periculosidade", "vt", "vr", "va",
         "homologação", "homologacao", "aviso prévio", "aviso previo", "justa causa", "justa-causa",
-        "sem justa", "despido", "dispensado", "demissão", "demissao", "exoneracao", "exoneração",
-        "estagiário", "estagiario", "pj", "mei funcionario", "pessoa jurídica", "trabalhador",
+        "sem justa", "despido", "dispensado", "exoneracao", "exoneração",
+        "estagiário", "estagiario", "pj", "mei funcionario", "pessoa jurídica",
         "emprego", "vaga", "contratação", "contratacao", "admitir", "demitir", "exonerar",
         "falta", "atestado", "licença", "licenca", "maternidade", "paternidade", "doença",
         "doenca", "acidente", "trabalho", "seguro", "desemprego", "seguro desemprego",
@@ -58,12 +74,12 @@ PALAVRAS_CHAVE = {
         "receita", "despesa", "lucro", "prejuízo", "prejuizo", "caixa", "bancário", "bancario",
         "depreciação", "depreciacao", "estoque", "inventário", "inventario", "razão", "razao",
         "contábeis", "contabeis", "escriturar", "lancamento", "lançamento", "partida dobrada",
-        "debito", "débito", "credito", "crédito", "plano de contas", "balancete", "balancete",
+        "debito", "débito", "credito", "crédito", "plano de contas", "balancete",
         "verificação", "verificacao", "razonete", "razonetes", "t", "conta", "contas",
-        "fornecedor", "cliente", "banco", "caixa", "tesouraria", "tesouraria", "fluxo",
+        "fornecedor", "cliente", "banco", "caixa", "tesouraria", "fluxo",
         "fluxo de caixa", "demonstração do resultado", "demonstracao do resultado",
         "patrimonio liquido", "patrimônio líquido", "capital", "reserva", "lucros",
-        "lucros acumulados", "prejuizos", "prejuízos", "dividendos", "juros", "capital",
+        "lucros acumulados", "prejuizos", "prejuízos", "dividendos", "juros",
         "giro", "prazo medio", "prazo médio", "rotatividade", "rentabilidade", "margem",
         "ebitda", "ebit", "noi", "roi", "roe", "roa", "payback", "break-even", "ponto de equilibrio",
         "análise", "analise", "horizontal", "vertical", "comparativo", "comparativa"
@@ -79,7 +95,7 @@ PALAVRAS_CHAVE = {
         "nome fantasia", "endereço", "endereco", "sede", "filial", "matriz", "transformação",
         "transformacao", "fusão", "fusao", "cisão", "cisao", "incorporação", "incorporacao",
         "extinção", "extincao", "dissolução", "dissolucao", "liquidacao", "liquidação",
-        "arquivamento", "arquivamento", "reabertura", "reabrir", "reorganização", "reorganizacao",
+        "arquivamento", "reabertura", "reabrir", "reorganização", "reorganizacao",
         "holding", "patrimonial", "participação", "participacao", "quotas", "ações", "acoes",
         "capital", "quota", "quotas", "sócios", "socios", "administrador", "diretor",
         "presidente", "vice", "conselho", "assembleia", "ata", "reunião", "reuniao",
@@ -91,10 +107,10 @@ PALAVRAS_CHAVE = {
 # ========== MENSAGENS DE BOAS-VINDAS POR AGENTE (fallback) ==========
 BOAS_VINDAS = {
     "triagem": "Olá! 😊 Bem-vindo ao atendimento da Caio Contábil. Sou a Ana, sua assistente virtual de triagem.\n\nPara te direcionar ao contador certo, me conta: você precisa de ajuda com dúvida fiscal, folha de pagamento, contabilidade, ou abertura/alteração de empresa?",
-    "fiscal": "📊 **Especialista Fiscal** assumindo o atendimento...\n\nOlá! Sou o Especialista Fiscal da Caio Contábil. Estou aqui para ajudar com suas dúvidas sobre impostos, guias, obrigações acessórias e toda a parte tributária.\n\nEm que posso ajudá-lo? 😊",
-    "dp_rh": "👥 **Especialista DP/RH** assumindo o atendimento...\n\nOlá! Sou o Especialista de Departamento Pessoal da Caio Contábil. Estou aqui para ajudar com folha de pagamento, eSocial, férias, rescisões e toda a parte trabalhista.\n\nEm que posso ajudá-lo? 😊",
-    "contabil": "📈 **Especialista Contábil** assumindo o atendimento...\n\nOlá! Sou o Especialista Contábil da Caio Contábil. Estou aqui para ajudar com balanço, DRE, livros contábeis, escrituração e análise financeira.\n\nEm que posso ajudá-lo? 😊",
-    "societario": "🏢 **Especialista Societário** assumindo o atendimento...\n\nOlá! Sou o Especialista Societário da Caio Contábil. Estou aqui para ajudar com abertura, alteração, encerramento de empresas, certidões e contratos.\n\nEm que posso ajudá-lo? 😊"
+    "fiscal": "📊 **Especialista Fiscal** assumindo o atendimento...\n\nOlá! Sou o Especialista Fiscal da Caio Contábil. Em que posso ajudá-lo? 😊",
+    "dp_rh": "👥 **Especialista DP/RH** assumindo o atendimento...\n\nOlá! Sou o Especialista de DP/RH da Caio Contábil. Em que posso ajudá-lo? 😊",
+    "contabil": "📈 **Especialista Contábil** assumindo o atendimento...\n\nOlá! Sou o Especialista Contábil da Caio Contábil. Em que posso ajudá-lo? 😊",
+    "societario": "🏢 **Especialista Societário** assumindo o atendimento...\n\nOlá! Sou o Especialista Societário da Caio Contábil. Em que posso ajudá-lo? 😊"
 }
 
 # ========== PROMPTS DOS AGENTES ==========
@@ -106,27 +122,14 @@ AGENTES = {
 
 🎯 SEU TRABALHO:
 1. Cumprimente o cliente de forma calorosa
-2. Identifique o tipo de demanda:
-   • 📊 FISCAL → Dúvidas sobre impostos, DAS, guias, SEF, RFB, obrigações acessórias
-   • 👥 DP/RH → Folha de pagamento, eSocial, férias, rescisões, INSS, FGTS
-   • 📈 CONTÁBIL → Balanço, DRE, livros contábeis, escrituração, análise financeira
-   • 🏢 SOCIETÁRIO → Abertura, alteração, encerramento de empresas, certidões, contratos
-3. Colete: nome, CNPJ/CPF, e-mail
-4. Informe que o especialista vai assumir o atendimento
-5. Seja breve e objetiva
+2. Peça o CNPJ da empresa para verificar na base de clientes
+3. Se o CNPJ constar na base → colete nome e e-mail, identifique a demanda e transfira
+4. Se o CNPJ NÃO constar na base → informe que o canal é exclusivo para clientes e ofereça transferir para o Contador Caio
+5. Seja breve e objetiva — máximo 3 frases por resposta
 
-📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
-O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
-
-REGRAS ABSOLUTAS SOBRE TELEFONE:
-• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
-• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
-• NUNCA invente, crie ou imagine outro número de telefone
-• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
-• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
-
-🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
+📞 TELEFONE DO ESCRITÓRIO: (14) 99879-7126
+• Se pedirem telefone, forneça EXATAMENTE este número
+• NUNCA invente outro número
 
 ⚠️ IMPORTANTE: Não resolva dúvidas técnicas. Só classifique e transfira."""
     },
@@ -136,35 +139,16 @@ REGRAS ABSOLUTAS SOBRE TELEFONE:
         "emoji": "📊",
         "prompt": """Você é o "Especialista Fiscal" da Caio Contábil LTDA.
 
-📊 SUA ESPECIALIDADE:
-• Impostos federais, estaduais e municipais
-• DAS, DARF, GPS, guias de recolhimento
-• Obrigações acessórias: SPED, EFD, ECD, ECF
-• Simples Nacional, Lucro Presumido, Lucro Real
-• Prazos de entrega e pagamento
-• Dúvidas sobre notas fiscais, CFOP, CST
+📊 SUA ESPECIALIDADE: Impostos, guias, obrigações acessórias, SPED, notas fiscais, CFOP, CST.
 
-📝 REGRAS:
-1. SEMPRE dê as boas-vindas ao assumir o atendimento
-2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
-3. Seja técnico mas didático
-4. Explique o "porquê" das orientações
-5. Sempre confirme CNPJ da empresa
-6. Se não souber algo, diga que vai consultar o contador responsável
-7. Ao final, pergunte se precisa de mais alguma coisa
+📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
+1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
+2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
+3. Responda apenas o que foi perguntado, sem enrolar
+4. Se não souber, diga que vai consultar o contador responsável
+5. Ao final, pergunte se precisa de mais alguma coisa
 
-📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
-O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
-
-REGRAS ABSOLUTAS SOBRE TELEFONE:
-• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
-• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
-• NUNCA invente, crie ou imagine outro número de telefone
-• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
-• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
-
-🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
+📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
 ⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
     },
@@ -174,35 +158,16 @@ REGRAS ABSOLUTAS SOBRE TELEFONE:
         "emoji": "👥",
         "prompt": """Você é o "Especialista de DP/RH" da Caio Contábil LTDA.
 
-👥 SUA ESPECIALIDADE:
-• Folha de pagamento e encargos trabalhistas
-• eSocial (S-1.0, S-2.2, S-2.3, S-2.4, S-2.5)
-• Férias, rescisões, admissões, demissões
-• INSS, FGTS, PIS, IRRF
-• Convenções coletivas e dissídios
-• PPP, RAIS, DIRF, GFIP
+👥 SUA ESPECIALIDADE: Folha, eSocial, férias, rescisões, INSS, FGTS, admissões, demissões.
 
-📝 REGRAS:
-1. SEMPRE dê as boas-vindas ao assumir o atendimento
-2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
-3. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
-4. Explique os cálculos quando solicitado
-5. Sempre peça a quantidade de funcionários
-6. Oriente sobre documentos necessários
-7. Seja empático com questões trabalhistas sensíveis
+📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
+1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
+2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
+3. Responda apenas o que foi perguntado, sem enrolar
+4. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
+5. Seja empático com questões sensíveis
 
-📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
-O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
-
-REGRAS ABSOLUTAS SOBRE TELEFONE:
-• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
-• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
-• NUNCA invente, crie ou imagine outro número de telefone
-• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
-• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
-
-🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
+📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
 ⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
     },
@@ -212,36 +177,16 @@ REGRAS ABSOLUTAS SOBRE TELEFONE:
         "emoji": "📈",
         "prompt": """Você é o "Especialista Contábil" da Caio Contábil LTDA.
 
-📈 SUA ESPECIALIDADE:
-• Escrituração contábil e livros contábeis
-• Balanço Patrimonial e DRE
-• Análise de indicadores financeiros
-• Conciliação bancária
-• Contas a pagar e a receber
-• Custos e formação de preço
-• Planejamento financeiro
+📈 SUA ESPECIALIDADE: Balanço, DRE, livros contábeis, escrituração, conciliação, indicadores.
 
-📝 REGRAS:
-1. SEMPRE dê as boas-vindas ao assumir o atendimento
-2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
+📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
+1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
+2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
 3. Use linguagem clara, evite jargões excessivos
-4. Explique a importância de cada demonstração
-5. Oriente sobre prazos de entrega dos livros
-6. Sugira melhorias quando apropriado
-7. Relacione dados contábeis com decisões de negócio
+4. Responda apenas o que foi perguntado, sem enrolar
+5. Relacione dados contábeis com decisões de negócio quando relevante
 
-📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
-O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
-
-REGRAS ABSOLUTAS SOBRE TELEFONE:
-• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
-• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
-• NUNCA invente, crie ou imagine outro número de telefone
-• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
-• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
-
-🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
+📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
 ⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
     },
@@ -251,36 +196,16 @@ REGRAS ABSOLUTAS SOBRE TELEFONE:
         "emoji": "🏢",
         "prompt": """Você é o "Especialista Societário" da Caio Contábil LTDA.
 
-🏢 SUA ESPECIALIDADE:
-• Abertura de empresas (MEI, ME, EPP, LTDA)
-• Alteração contratual (sócios, CNAE, capital social)
-• Encerramento e baixa de empresas
-• Certidões negativas e positivas
-• Registro na JUCESP, Receita Federal, Prefeitura
-• Contratos sociais e alterações
-• Regularização de empresas inativas
+🏢 SUA ESPECIALIDADE: Abertura, alteração, encerramento de empresas, certidões, contratos, regularização.
 
-📝 REGRAS:
-1. SEMPRE dê as boas-vindas ao assumir o atendimento
-2. Pergunte "Em que posso ajudá-lo?" ou "Qual é a sua dúvida?"
-3. Explique o passo a passo de cada processo
-4. Informe documentos necessários com antecedência
-5. Dê prazos realistas (abertura: 5-15 dias úteis)
-6. Explique custos envolvidos quando perguntado
-7. Seja paciente — processos societários geram ansiedade
+📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
+1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
+2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
+3. Explique o passo a passo de forma resumida
+4. Dê prazos realistas (abertura: 5-15 dias úteis)
+5. Seja paciente — processos societários geram ansiedade
 
-📞 INFORMAÇÃO DE CONTATO — LEIA COM ATENÇÃO:
-O ÚNICO telefone de contato do escritório Caio Contábil é: (14) 99879-7126
-
-REGRAS ABSOLUTAS SOBRE TELEFONE:
-• Se o cliente pedir telefone, WhatsApp, número para ligar, contato por ligação ou similar → FORNEÇA SEMPRE: (14) 99879-7126
-• NUNCA diga "não tenho telefone", "não sei o telefone" ou "um contador vai ligar para você"
-• NUNCA invente, crie ou imagine outro número de telefone
-• NUNCA use números como (11) 3003-XXXX, (11) 5555-5555 ou qualquer outro — esses são FALSOS
-• O número (14) 99879-7126 é o ÚNICO número verdadeiro e deve ser repetido EXATAMENTE assim
-
-🚫 PROIBIDO:
-• NUNCA invente e-mails, endereços ou outros dados de contato além do telefone (14) 99879-7126
+📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
 ⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
     }
@@ -303,7 +228,6 @@ def sanitizar_telefone_na_resposta(reply, user_message):
     Pós-processamento de segurança: garante que qualquer número de telefone
     na resposta seja o número oficial (14) 99879-7126.
     """
-    # Detecta se o usuário está pedindo telefone/contato
     pedindo_telefone = any(palavra in user_message.lower() for palavra in [
         "telefone", "ligar", "ligação", "ligacao", "contato", "whatsapp", "zap",
         "numero", "número", "fone", "celular", "call", "phone", "tel"
@@ -312,26 +236,20 @@ def sanitizar_telefone_na_resposta(reply, user_message):
     if not pedindo_telefone:
         return reply
 
-    # Padrões de telefone brasileiro que podem ter sido inventados pelo modelo
     padroes_telefone = [
-        r'\(\d{2}\)\s?\d{4,5}-\d{4}',           # (11) 99999-9999
-        r'\(\d{2}\)\s?\d{4,5}-[Xx\*]{4}',        # (11) 3003-XXXX
-        r'\d{2}\s?\d{4,5}-\d{4}',                 # 11 99999-9999
-        r'\(\d{2}\)\s?\d{8,9}',                   # (11) 999999999
-        r'\d{2}\s?\d{8,9}',                       # 11 999999999
-        r'\(\d{2}\)\s?\d{4}-\d{4}',              # (11) 5555-5555
+        r'\(\d{2}\)\s?\d{4,5}-\d{4}',
+        r'\(\d{2}\)\s?\d{4,5}-[Xx\*]{4}',
+        r'\d{2}\s?\d{4,5}-\d{4}',
+        r'\(\d{2}\)\s?\d{8,9}',
+        r'\d{2}\s?\d{8,9}',
+        r'\(\d{2}\)\s?\d{4}-\d{4}',
     ]
 
-    telefone_oficial = TELEFONE_OFICIAL
     reply_corrigida = reply
-
     for padrao in padroes_telefone:
-        reply_corrigida = re.sub(padrao, telefone_oficial, reply_corrigida)
+        reply_corrigida = re.sub(padrao, TELEFONE_OFICIAL, reply_corrigida)
 
-    # Se a resposta continha um número fictício e foi substituído,
-    # garante que não fique texto estranho ao redor
     if reply_corrigida != reply:
-        # Remove menções a "fictício", "padrão", "exemplo" etc. que o modelo possa ter adicionado
         reply_corrigida = re.sub(r'\*?\(número fictício[/\-]?padrão[^)]*\)\*?', '', reply_corrigida, flags=re.IGNORECASE)
         reply_corrigida = re.sub(r'\*?número fictício[^\*]*\*?', '', reply_corrigida, flags=re.IGNORECASE)
         reply_corrigida = re.sub(r'\*?padrão de atendimento[^\*]*\*?', '', reply_corrigida, flags=re.IGNORECASE)
@@ -339,6 +257,30 @@ def sanitizar_telefone_na_resposta(reply, user_message):
         reply_corrigida = reply_corrigida.strip()
 
     return reply_corrigida
+
+# ========== FUNÇÃO DE DETECÇÃO DE CNPJ/CPF ==========
+def detectar_documento(message):
+    """
+    Detecta se a mensagem é apenas um CNPJ (14 dígitos) ou CPF (11 dígitos).
+    Retorna uma tupla (tipo, numero) ou (None, None).
+    """
+    apenas_numeros = re.sub(r'\D', '', message)
+
+    if len(apenas_numeros) == 14:
+        return ("CNPJ", apenas_numeros)
+
+    if len(apenas_numeros) == 11:
+        return ("CPF", apenas_numeros)
+
+    return (None, None)
+
+# ========== FUNÇÃO DE VERIFICAÇÃO DE CLIENTE ==========
+def verificar_cliente(cnpj):
+    """
+    Verifica se o CNPJ está na base de clientes do escritório.
+    Retorna os dados do cliente ou None.
+    """
+    return CLIENTES_DB.get(cnpj)
 
 # ========== ROTAS ==========
 @app.route('/')
@@ -376,6 +318,9 @@ def chat():
                 "agente_atual": "triagem",
                 "historico": [],
                 "msg_count": 0,
+                "cnpj": None,
+                "cliente_verificado": False,
+                "fora_carteira": False,
                 "transferencia_pendente": False,
                 "agente_destino": None
             }
@@ -383,44 +328,84 @@ def chat():
         sessao = sessions[session_id]
         sessao["msg_count"] += 1
 
-        # 1. DETECTA AGENTE por palavras-chave
+        # === 1. DETECTA SE É CNPJ/CPF ===
+        tipo_doc, numero_doc = detectar_documento(message)
+        mensagem_para_gemini = message
+
+        # Se for CNPJ na triagem e ainda não foi verificado
+        if tipo_doc == "CNPJ" and sessao["agente_atual"] == "triagem" and not sessao["cliente_verificado"]:
+            cliente = verificar_cliente(numero_doc)
+            sessao["cnpj"] = numero_doc
+            sessao["cliente_verificado"] = True
+
+            if cliente:
+                # Cliente encontrado na base
+                info_cliente = f"Cliente verificado na base: {cliente['razao_social']}. Regime: {cliente['regime_tributario']}."
+                mensagem_para_gemini = f"CNPJ confirmado na base de clientes: {numero_doc}. {info_cliente} O cliente agora precisa de atendimento."
+            else:
+                # Cliente NÃO encontrado na base
+                sessao["fora_carteira"] = True
+                reply = (
+                    "Verificando nossa base de dados, constatei que sua empresa não faz parte da nossa carteira de clientes. "
+                    "Sendo assim, peço desculpas, mas este canal é voltado para o atendimento de empresas parceiras.\n\n"
+                    "Caso tenha pretensão de mudar de contabilidade, posso transferir seu atendimento para fazer diretamente com o Contador Caio. "
+                    "Deseja prosseguir?"
+                )
+
+                sessao["historico"].append({"role": "user", "text": message})
+                sessao["historico"].append({"role": "model", "text": reply})
+                notify_telegram(session_id, message, reply, "triagem")
+
+                return jsonify({
+                    "reply": reply,
+                    "session_id": session_id,
+                    "agente": "triagem",
+                    "agente_nome": "Ana",
+                    "transferencia": False,
+                    "fora_carteira": True
+                })
+
+        # Se for CNPJ/CPF fornecido como resposta (não na triagem)
+        if tipo_doc and sessao["agente_atual"] != "triagem":
+            mensagem_para_gemini = f"O cliente está fornecendo o {tipo_doc} que você solicitou: {numero_doc}"
+
+        # === 2. DETECTA AGENTE por palavras-chave ===
         agente_detectado = detectar_agente_por_palavras(message)
 
-        # 2. LÓGICA DE TRANSFERÊNCIA
+        # === 3. LÓGICA DE TRANSFERÊNCIA ===
         agente_key = sessao["agente_atual"]
         transferencia = False
 
-        # Se detectou agente específico
         if agente_detectado:
-            # Se está na triagem → TRANSFERE para o agente detectado
             if sessao["agente_atual"] == "triagem":
-                agente_key = agente_detectado
-                sessao["agente_atual"] = agente_key
-                transferencia = True
-            # Se já está com outro agente e detectou diferente → TRANSFERE
+                # Só transfere se o cliente já foi verificado e está na carteira
+                if sessao["cliente_verificado"] and not sessao["fora_carteira"]:
+                    agente_key = agente_detectado
+                    sessao["agente_atual"] = agente_key
+                    transferencia = True
             elif agente_detectado != sessao["agente_atual"]:
                 agente_key = agente_detectado
                 sessao["agente_atual"] = agente_key
                 transferencia = True
 
-        # 3. Chama Gemini com retry para rate limit
-        reply = call_gemini_com_retry(message, agente_key, sessao["historico"], transferencia)
+        # === 4. Chama Gemini com retry ===
+        reply = call_gemini_com_retry(mensagem_para_gemini, agente_key, sessao["historico"], transferencia)
 
-        # 4. SANITIZAÇÃO DE SEGURANÇA: corrige telefones inventados pelo modelo
+        # === 5. SANITIZAÇÃO DE SEGURANÇA ===
         reply = sanitizar_telefone_na_resposta(reply, message)
 
-        # 5. Se Gemini falhou completamente, usa fallback
+        # === 6. Se Gemini falhou, usa fallback ===
         if reply.startswith("⚠️"):
             if transferencia:
                 reply = BOAS_VINDAS.get(agente_key, BOAS_VINDAS["triagem"])
             else:
                 reply = f"Olá! Sou o {AGENTES[agente_key]['nome']}. Em que posso ajudá-lo? 😊"
 
-        # 6. Salva histórico
+        # === 7. Salva histórico ===
         sessao["historico"].append({"role": "user", "text": message})
         sessao["historico"].append({"role": "model", "text": reply})
 
-        # 7. Notifica Telegram
+        # === 8. Notifica Telegram ===
         notify_telegram(session_id, message, reply, agente_key)
 
         return jsonify({
@@ -463,10 +448,8 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
     agente = AGENTES[agente_key]
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-    # Monta o contexto
     contents = [{"role": "user", "parts": [{"text": agente["prompt"]}]}]
 
-    # Se for transferência, adiciona contexto
     if transferencia and len(historico) > 0:
         transfer_context = "Você está assumindo este atendimento agora. A conversa anterior foi:\n"
         for msg in historico[-4:]:
@@ -483,7 +466,6 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
 
     data = json.dumps({"contents": contents}).encode('utf-8')
 
-    # Retry com backoff exponencial
     for tentativa in range(max_retries):
         try:
             req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
@@ -492,7 +474,6 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
                 result = json.loads(response.read().decode('utf-8'))
                 reply = result["candidates"][0]["content"]["parts"][0]["text"]
 
-                # Se for transferência, adiciona prefixo visual
                 if transferencia:
                     prefixo = f"{agente['emoji']} **{agente['nome']}** assumindo o atendimento...\n\n"
                     reply = prefixo + reply
