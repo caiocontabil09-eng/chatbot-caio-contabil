@@ -158,14 +158,15 @@ AGENTES = {
 
 📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
 1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
-2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
-3. Responda apenas o que foi perguntado, sem enrolar
-4. Se não souber, diga que vai consultar o contador responsável
-5. Ao final, pergunte se precisa de mais alguma coisa
+2. NÃO peça CNPJ, dados cadastrais ou confirmação de dados — tudo já foi verificado na triagem
+3. NÃO peça para o cliente ligar, entrar em contato pelo WhatsApp ou confirmar informações por telefone
+4. Responda apenas o que foi perguntado, com base nos dados da empresa que já foram fornecidos
+5. Se não souber algo, diga que vai consultar o contador responsável
+6. Ao final, pergunte se precisa de mais alguma coisa
 
 📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
-⚠️ NUNCA dê orientação definitiva sem confirmar dados cadastrais."""
+⚠️ Os dados da empresa já foram confirmados na triagem. NÃO peça para confirmar novamente."""
     },
 
     "dp_rh": {
@@ -177,14 +178,15 @@ AGENTES = {
 
 📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
 1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
-2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
-3. Responda apenas o que foi perguntado, sem enrolar
-4. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
-5. Seja empático com questões sensíveis
+2. NÃO peça CNPJ, dados cadastrais ou confirmação de dados — tudo já foi verificado na triagem
+3. NÃO peça para o cliente ligar, entrar em contato pelo WhatsApp ou confirmar informações por telefone
+4. Responda apenas o que foi perguntado, com base nos dados da empresa que já foram fornecidos
+5. Seja claro sobre prazos legais (ex: rescisão em 10 dias)
+6. Seja empático com questões sensíveis
 
 📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
-⚠️ NUNCA dê orientação trabalhista sem confirmar dados da empresa."""
+⚠️ Os dados da empresa já foram confirmados na triagem. NÃO peça para confirmar novamente."""
     },
 
     "contabil": {
@@ -196,14 +198,15 @@ AGENTES = {
 
 📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
 1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
-2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
-3. Use linguagem clara, evite jargões excessivos
-4. Responda apenas o que foi perguntado, sem enrolar
-5. Relacione dados contábeis com decisões de negócio quando relevante
+2. NÃO peça CNPJ, dados cadastrais ou confirmação de dados — tudo já foi verificado na triagem
+3. NÃO peça para o cliente ligar, entrar em contato pelo WhatsApp ou confirmar informações por telefone
+4. Use linguagem clara, evite jargões excessivos
+5. Responda apenas o que foi perguntado, com base nos dados da empresa que já foram fornecidos
+6. Relacione dados contábeis com decisões de negócio quando relevante
 
 📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
-⚠️ NUNCA dê parecer contábil sem acesso aos dados completos."""
+⚠️ Os dados da empresa já foram confirmados na triagem. NÃO peça para confirmar novamente."""
     },
 
     "societario": {
@@ -215,14 +218,15 @@ AGENTES = {
 
 📝 REGRAS DE RESPOSTA (SIGA RIGOROSAMENTE):
 1. Seja DIRETO e OBJETIVO — respostas curtas, máximo 4 linhas
-2. NÃO peça CNPJ — ele já foi coletado pela Ana na triagem
-3. Explique o passo a passo de forma resumida
-4. Dê prazos realistas (abertura: 5-15 dias úteis)
-5. Seja paciente — processos societários geram ansiedade
+2. NÃO peça CNPJ, dados cadastrais ou confirmação de dados — tudo já foi verificado na triagem
+3. NÃO peça para o cliente ligar, entrar em contato pelo WhatsApp ou confirmar informações por telefone
+4. Explique o passo a passo de forma resumida
+5. Dê prazos realistas (abertura: 5-15 dias úteis)
+6. Seja paciente — processos societários geram ansiedade
 
 📞 TELEFONE: (14) 99879-7126 — forneça SEMPRE este número, nunca invente outro.
 
-⚠️ NUNCA prometa prazos sem consultar o setor burocrático."""
+⚠️ Os dados da empresa já foram confirmados na triagem. NÃO peça para confirmar novamente."""
     }
 }
 
@@ -469,7 +473,7 @@ def chat():
                 transferencia = True
 
         # === 4. Chama Gemini com retry ===
-        reply = call_gemini_com_retry(mensagem_para_gemini, agente_key, sessao["historico"], transferencia)
+        reply = call_gemini_com_retry(mensagem_para_gemini, agente_key, sessao["historico"], transferencia, sessao.get("cnpj"))
 
         # === 5. SANITIZAÇÃO DE SEGURANÇA ===
         reply = sanitizar_telefone_na_resposta(reply, message)
@@ -521,7 +525,7 @@ def detectar_agente_por_palavras(message):
 
 
 # ========== CHAMAR GEMINI COM RETRY ==========
-def call_gemini_com_retry(message, agente_key, historico, transferencia=False, max_retries=3):
+def call_gemini_com_retry(message, agente_key, historico, transferencia=False, cnpj=None, max_retries=3):
     """Chama Gemini com retry exponencial para rate limit (429)."""
 
     if not GEMINI_API_KEY:
@@ -537,6 +541,19 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
         for msg in historico[-4:]:
             quem = "Cliente" if msg["role"] == "user" else "Ana (triagem)"
             transfer_context += f"{quem}: {msg['text']}\n"
+
+        # Adiciona dados do cliente verificado ao contexto
+        if cnpj:
+            cliente = verificar_cliente(cnpj)
+            if cliente:
+                transfer_context += "\n📋 DADOS DO CLIENTE (já verificados na triagem):\n"
+                transfer_context += f"- CNPJ: {cnpj}\n"
+                transfer_context += f"- Razão Social: {cliente.get('razao_social', 'Não informado')}\n"
+                transfer_context += f"- Regime Tributário: {cliente.get('regime_tributario', 'Não informado')}\n"
+                transfer_context += f"- Atividade: {cliente.get('atividade', 'Não informado')}\n"
+                transfer_context += f"- Responsável: {cliente.get('responsavel', 'Não informado')}\n"
+                transfer_context += "\n⚠️ IMPORTANTE: NÃO peça para confirmar CNPJ, dados cadastrais ou pedir para ligar. Os dados já foram verificados.\n"
+
         transfer_context += "\nAgora você deve dar as boas-vindas ao cliente e perguntar como pode ajudá-lo."
         contents.append({"role": "user", "parts": [{"text": transfer_context}]})
 
