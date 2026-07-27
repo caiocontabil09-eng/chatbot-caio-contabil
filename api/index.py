@@ -6,6 +6,8 @@ import urllib.error
 import time
 import random
 import re
+import csv
+import io
 
 app = Flask(__name__)
 
@@ -14,24 +16,35 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+# ========== CONFIGURAÇÃO DA PLANILHA GOOGLE SHEETS ==========
+# Cole aqui o ID da sua planilha pública do Google Sheets
+#
+# FORMATO 1 (planilha normal): Se a URL for https://docs.google.com/spreadsheets/d/1ABC123xyz/edit
+# O ID é: 1ABC123xyz
+#
+# FORMATO 2 (planilha já publicada): Se a URL for https://docs.google.com/spreadsheets/d/e/2PACX-.../pubhtml
+# O ID é: 2PACX-1vTuLsYnIyy5xYymmdjb4UEBreRH7KAe8VxyHCnjr8uyc8FMEkUsuYuWzEhqiEfx84zSKpTz7Gaw-0iy
+GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID", "")
+
+# Monta a URL de CSV automaticamente conforme o formato do ID
+def montar_url_csv(sheet_id):
+    if not sheet_id:
+        return ""
+    # Se o ID começa com "2PACX-", é uma planilha já publicada (formato /e/)
+    if sheet_id.startswith("2PACX-"):
+        return f"https://docs.google.com/spreadsheets/d/e/{sheet_id}/pub?output=csv"
+    # Caso contrário, é o ID normal da planilha
+    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+
+GOOGLE_SHEET_CSV_URL = montar_url_csv(GOOGLE_SHEET_ID)
+
 # ========== DADOS OFICIAIS DO ESCRITÓRIO ==========
 TELEFONE_OFICIAL = "(14) 99879-7126"
 
-# ========== BASE DE CLIENTES DO ESCRITÓRIO ==========
-# ADICIONE/EDITE OS CLIENTES AQUI NO FORMATO:
-# "CNPJ_SEM_FORMATACAO": { "razao_social": "...", "regime": "...", "responsavel": "..." }
-CLIENTES_DB = {
-    "11377525000167": {
-        "razao_social": "EMPRESA EXEMPLO LTDA",
-        "nome_fantasia": "Exemplo",
-        "regime_tributario": "Simples Nacional",
-        "atividade": "Comércio varejista",
-        "responsavel": "João Silva",
-        "setor": "fiscal"
-    }
-    # Adicione mais clientes aqui:
-    # "12345678000190": { "razao_social": "...", ... },
-}
+# ========== BASE DE CLIENTES (carregada da planilha) ==========
+CLIENTES_DB = {}
+ULTIMA_ATUALIZACAO = 0
+CACHE_TTL_SEGUNDOS = 300  # 5 minutos
 
 # ========== PALAVRAS-CHAVE PARA ROUTING ==========
 PALAVRAS_CHAVE = {
@@ -222,6 +235,62 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     return response
 
+
+# ========== CARREGAR CLIENTES DA PLANILHA ==========
+def carregar_clientes_da_planilha():
+    """
+    Baixa a planilha pública do Google Sheets em formato CSV e carrega os clientes.
+    A planilha deve ter as colunas: cnpj, razao_social, nome_fantasia, regime_tributario, atividade, responsavel, setor
+    """
+    global CLIENTES_DB, ULTIMA_ATUALIZACAO
+
+    # Se não tiver ID da planilha configurado, usa fallback vazio
+    if not GOOGLE_SHEET_ID:
+        print("⚠️ GOOGLE_SHEET_ID não configurado. Usando base de clientes vazia.")
+        CLIENTES_DB = {}
+        ULTIMA_ATUALIZACAO = time.time()
+        return
+
+    # Verifica se o cache ainda é válido
+    agora = time.time()
+    if CLIENTES_DB and (agora - ULTIMA_ATUALIZACAO) < CACHE_TTL_SEGUNDOS:
+        return
+
+    try:
+        req = urllib.request.Request(GOOGLE_SHEET_CSV_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            csv_data = response.read().decode('utf-8')
+
+        leitor = csv.DictReader(io.StringIO(csv_data))
+        novos_clientes = {}
+
+        for linha in leitor:
+            cnpj = linha.get("cnpj", "").strip()
+            # Remove formatação do CNPJ (pontos, traços, barras)
+            cnpj_limpo = re.sub(r'\D', '', cnpj)
+
+            if len(cnpj_limpo) == 14:
+                novos_clientes[cnpj_limpo] = {
+                    "razao_social": linha.get("razao_social", "").strip(),
+                    "nome_fantasia": linha.get("nome_fantasia", "").strip(),
+                    "regime_tributario": linha.get("regime_tributario", "").strip(),
+                    "atividade": linha.get("atividade", "").strip(),
+                    "responsavel": linha.get("responsavel", "").strip(),
+                    "setor": linha.get("setor", "").strip()
+                }
+
+        CLIENTES_DB = novos_clientes
+        ULTIMA_ATUALIZACAO = agora
+        print(f"✅ {len(CLIENTES_DB)} clientes carregados da planilha.")
+
+    except Exception as e:
+        print(f"⚠️ Erro ao carregar planilha: {e}")
+        # Mantém a base anterior se houver, senão fica vazia
+        if not CLIENTES_DB:
+            CLIENTES_DB = {}
+        ULTIMA_ATUALIZACAO = agora
+
+
 # ========== FUNÇÃO DE SANITIZAÇÃO DE TELEFONE ==========
 def sanitizar_telefone_na_resposta(reply, user_message):
     """
@@ -258,6 +327,7 @@ def sanitizar_telefone_na_resposta(reply, user_message):
 
     return reply_corrigida
 
+
 # ========== FUNÇÃO DE DETECÇÃO DE CNPJ/CPF ==========
 def detectar_documento(message):
     """
@@ -274,22 +344,28 @@ def detectar_documento(message):
 
     return (None, None)
 
+
 # ========== FUNÇÃO DE VERIFICAÇÃO DE CLIENTE ==========
 def verificar_cliente(cnpj):
     """
     Verifica se o CNPJ está na base de clientes do escritório.
+    Recarrega a planilha se o cache expirou.
     Retorna os dados do cliente ou None.
     """
+    carregar_clientes_da_planilha()
     return CLIENTES_DB.get(cnpj)
+
 
 # ========== ROTAS ==========
 @app.route('/')
 def home():
+    carregar_clientes_da_planilha()
     return jsonify({
         "status": "online",
         "service": "Caio Contábil - Multi-Agente API v5.1",
         "version": "5.1.0",
-        "agentes": list(AGENTES.keys())
+        "agentes": list(AGENTES.keys()),
+        "clientes_carregados": len(CLIENTES_DB)
     })
 
 @app.route('/chat', methods=['GET', 'POST', 'OPTIONS'])
@@ -298,10 +374,12 @@ def chat():
         return jsonify({}), 200
 
     if request.method == 'GET':
+        carregar_clientes_da_planilha()
         return jsonify({
             "status": "online",
             "service": "Caio Contábil - Multi-Agente API v5.1",
-            "version": "5.1.0"
+            "version": "5.1.0",
+            "clientes_carregados": len(CLIENTES_DB)
         })
 
     try:
@@ -419,6 +497,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ========== DETECTAR AGENTE ==========
 def detectar_agente_por_palavras(message):
     """Detecta o agente correto baseado em palavras-chave."""
@@ -437,6 +516,7 @@ def detectar_agente_por_palavras(message):
                 return cat
 
     return None
+
 
 # ========== CHAMAR GEMINI COM RETRY ==========
 def call_gemini_com_retry(message, agente_key, historico, transferencia=False, max_retries=3):
@@ -494,6 +574,7 @@ def call_gemini_com_retry(message, agente_key, historico, transferencia=False, m
             return "⚠️ Erro de conexão."
 
     return "⚠️ Servidor ocupado. Tente novamente em alguns segundos."
+
 
 # ========== TELEGRAM ==========
 def notify_telegram(session_id, message, reply, agente):
