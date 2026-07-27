@@ -17,14 +17,16 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # ========== CONFIGURAÇÃO DA PLANILHA GOOGLE SHEETS ==========
-# Cole aqui o ID da sua planilha pública do Google Sheets
+# Aceita duas variáveis de ambiente:
+#   GOOGLE_SHEET_ID          → nome padrão
+#   ID_DA_PLANILHA_DO_GOOGLE → nome usado no Vercel do Caio Contábil
 #
 # FORMATO 1 (planilha normal): Se a URL for https://docs.google.com/spreadsheets/d/1ABC123xyz/edit
 # O ID é: 1ABC123xyz
 #
 # FORMATO 2 (planilha já publicada): Se a URL for https://docs.google.com/spreadsheets/d/e/2PACX-.../pubhtml
 # O ID é: 2PACX-1vTuLsYnIyy5xYymmdjb4UEBreRH7KAe8VxyHCnjr8uyc8FMEkUsuYuWzEhqiEfx84zSKpTz7Gaw-0iy
-GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID", "")
+GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID", "") or os.environ.get("ID_DA_PLANILHA_DO_GOOGLE", "")
 
 # Monta a URL de CSV automaticamente conforme o formato do ID
 def montar_url_csv(sheet_id):
