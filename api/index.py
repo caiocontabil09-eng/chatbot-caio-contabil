@@ -7,15 +7,12 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Configurações de API
+# Configurações de API nas Variáveis de Ambiente
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def enviar_alerta_telegram(mensagem_texto):
-    """
-    Função que dispara um alerta em tempo real para o Grupo de Contadores no Telegram.
-    """
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
         payload = {
@@ -62,7 +59,6 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
     analise_seguranca = model_auditor.generate_content(f"Mensagem: {mensagem_cliente}\nRascunho: {resposta_rascunho}").text.strip()
     
     if "BLOQUEADO" in analise_seguranca or "#CONTEUDO_INCONCLUSIVO#" in resposta_rascunho:
-        # Alerta o grupo que um cliente caiu no filtro de segurança
         alerta = (
             "🚨 *ALERTA DE ATENDIMENTO - CAIO CONTÁBIL IA*\n\n"
             f"• *Setor solicitado:* {agente_nome.upper()}\n"
@@ -74,20 +70,30 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         
     return resposta_rascunho
 
-@app.route("/api/atendimento", methods=["POST"])
-def api_atendimento():
+# ROTA PRINCIPAL ALTERADA PARA PROVER COMPATIBILIDADE DIRETA
+@app.route("/", methods=["GET", "POST"])
+def home_atendimento():
+    if request.method == "GET":
+        return jsonify({ "status": "Servidor Caio Contábil IA Ativo e Operacional" })
+        
+    # Processamento do POST enviado pelo Widget
     dados = request.get_json() or {}
-    mensagem = dados.get("mensagem", "")
-    setor = dados.get("setor", "sofia")
     
-    # Verifica se a mensagem se parece com a entrega de um número de WhatsApp pós-bloqueio
+    # Captura variações comuns de chaves que os robôs usam (message, mensagem, text, etc)
+    mensagem = dados.get("mensagem") or dados.get("message") or dados.get("text") or ""
+    setor = dados.get("setor") or dados.get("department") or "sofia"
+    
+    if not mensagem:
+        return jsonify({ "resposta": "Olá! Como posso ajudar você hoje?" })
+    
+    # Varredura para identificar se o cliente forneceu um telefone/WhatsApp
     padrao_telefone = r'(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\s?\d{4}-\d{4}|\d{4}-\d{4}|9\d{8}|\d{8})'
     telefones = re.findall(padrao_telefone, mensagem)
     
     if telefones:
         alerta_lead = (
             "✅ *NOVO CLIENTE CAPTURADO!*\n\n"
-            f"• *WhatsApp localizado:* `{telefones[0]}`\n"
+            f"• *WhatsApp localizado:* `{telefones}`\n"
             f"• *Mensagem final:* \"{mensagem}\"\n\n"
             "📞 _Por favor, um contador humano deve entrar em contato via (14) 99879-7126 imediatamente._"
         )
@@ -96,10 +102,10 @@ def api_atendimento():
             "resposta": "Perfeito! Já captei o seu número. Encaminhei os detalhes para a nossa equipe e em instantes um de nossos contadores especialistas vai te chamar. Obrigado!"
         })
 
-    resposta_final = responder_cliente(setor, mensagem)
+    resposta_final = responder_cliente(setor, message)
     return jsonify({ "resposta": resposta_final })
 
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
+# Fallback para rotas alternativas
+@app.route("/<path:path>", methods=["GET", "POST"])
 def catch_all(path):
-    return jsonify({ "status": "Servidor Caio Contábil IA Ativo" })
+    return home_atendimento()
