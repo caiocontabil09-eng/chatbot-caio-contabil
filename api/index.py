@@ -14,7 +14,8 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def enviar_alerta_telegram(mensagem_texto):
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
+        # CORREÇÃO 2: URL correta da API do Telegram
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
             "text": mensagem_texto,
@@ -22,8 +23,9 @@ def enviar_alerta_telegram(mensagem_texto):
         }
         try:
             requests.post(url, json=payload, timeout=10)
-        except Exception:
-            pass
+        except Exception as e:
+            # Silencia o erro, mas mantém log útil para debug
+            print(f"[Telegram] Falha ao enviar alerta: {e}")
 
 def carregar_base_radar():
     try:
@@ -50,13 +52,35 @@ MENSAGEM_DR_CAIO_CEO = (
     "ou, se preferir, nos chame direto no nosso telefone oficial: (14) 99879-7126."
 )
 
+def extrair_texto_seguro(resposta):
+    """CORREÇÃO 3: Evita crash quando o Gemini bloqueia ou retorna vazio."""
+    if not resposta or not resposta.candidates:
+        return ""
+    try:
+        return resposta.text
+    except Exception:
+        # Fallback para parts se .text falhar (bloqueio de safety, etc.)
+        try:
+            return "".join(part.text for part in resposta.candidates[0].content.parts)
+        except Exception:
+            return ""
+
 def responder_cliente(setor_escolhido, mensagem_cliente):
     agente_nome = setor_escolhido.lower() if setor_escolhido.lower() in PROMPTS_AGENTES else "sofia"
-    model_atendimento = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=PROMPTS_AGENTES[agente_nome])
-    resposta_rascunho = model_atendimento.generate_content(mensagem_cliente).text
     
-    model_auditor = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=PROMPT_AUDITOR_BRUNO)
-    analise_seguranca = model_auditor.generate_content(f"Mensagem: {mensagem_cliente}\nRascunho: {resposta_rascunho}").text.strip()
+    model_atendimento = genai.GenerativeModel(
+        model_name="gemini-1.5-flash", 
+        system_instruction=PROMPTS_AGENTES[agente_nome]
+    )
+    resposta_raw = model_atendimento.generate_content(mensagem_cliente)
+    resposta_rascunho = extrair_texto_seguro(resposta_raw)
+    
+    model_auditor = genai.GenerativeModel(
+        model_name="gemini-1.5-flash", 
+        system_instruction=PROMPT_AUDITOR_BRUNO
+    )
+    auditor_raw = model_auditor.generate_content(f"Mensagem: {mensagem_cliente}\nRascunho: {resposta_rascunho}")
+    analise_seguranca = extrair_texto_seguro(auditor_raw).strip()
     
     if "BLOQUEADO" in analise_seguranca or "#CONTEUDO_INCONCLUSIVO#" in resposta_rascunho:
         alerta = (
@@ -70,16 +94,13 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         
     return resposta_rascunho
 
-# ROTA PRINCIPAL ALTERADA PARA PROVER COMPATIBILIDADE DIRETA
 @app.route("/", methods=["GET", "POST"])
 def home_atendimento():
     if request.method == "GET":
         return jsonify({ "status": "Servidor Caio Contábil IA Ativo e Operacional" })
         
-    # Processamento do POST enviado pelo Widget
     dados = request.get_json() or {}
     
-    # Captura variações comuns de chaves que os robôs usam (message, mensagem, text, etc)
     mensagem = dados.get("mensagem") or dados.get("message") or dados.get("text") or ""
     setor = dados.get("setor") or dados.get("department") or "sofia"
     
@@ -102,10 +123,13 @@ def home_atendimento():
             "resposta": "Perfeito! Já captei o seu número. Encaminhei os detalhes para a nossa equipe e em instantes um de nossos contadores especialistas vai te chamar. Obrigado!"
         })
 
-    resposta_final = responder_cliente(setor, message)
+    # CORREÇÃO 1: Usar 'mensagem' em vez de 'message'
+    resposta_final = responder_cliente(setor, mensagem)
     return jsonify({ "resposta": resposta_final })
 
-# Fallback para rotas alternativas
 @app.route("/<path:path>", methods=["GET", "POST"])
 def catch_all(path):
     return home_atendimento()
+
+if __name__ == "__main__":
+    app.run(debug=True)
