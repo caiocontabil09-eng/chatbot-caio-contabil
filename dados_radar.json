@@ -1,0 +1,17 @@
+{
+  "ultima_atualizacao": "2026-07-28",
+  "status_reforma_tributaria": {
+    "pontos_conclusivos": {
+      "unificacao_impostos": "Os impostos PIS, COFINS, IPI, ICMS e ISS estao sendo substituidos pelo IBS (Estados/Municipios) e CBS (Uniao).",
+      "regime_simples_nacional": "O Simples Nacional foi mantido. As empresas podem continuar pagando a guia unificada tradicional normalmente.",
+      "mei": "O MEI continua existindo e mantem o recolhimento em valor fixo mensal (DAS-MEI), sem cobranca direta de IBS/CBS dentro do limite legal."
+    },
+    "pontos_inconclusivos": {
+      "aliquota_padrao_final": "A aliquota final somada de IBS e CBS ainda passa por pequenos ajustes regionais de estado para estado e nao foi fixada.",
+      "regras_especificas_subsidios": "Regras de incentivos especificas para alguns setores locais de servicos ainda estao em discussao e votacao."
+    }
+  },
+  "diretrizes_trabalhistas_rh": {
+    "esocial_2026": "Obrigatoriedade de envio de exames medicos de SST e novas regras de simplificacao de fechamento de folha de microempresas ativas."
+  }
+}
