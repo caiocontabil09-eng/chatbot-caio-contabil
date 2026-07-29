@@ -10,10 +10,10 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ============================================================
-# CONFIGURAÇÕES — NOMES IGUAIS AO QUE VOCÊ JÁ TEM NO VERCEL
+# CONFIGURAÇÕES
 # ============================================================
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")  # ← Usa o nome que você já tem
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # ============================================================
@@ -78,7 +78,6 @@ MENSAGEM_DR_CAIO_CEO = (
 # UTILITÁRIOS
 # ============================================================
 def extrair_texto_seguro(resposta):
-    """Extrai texto da resposta do Gemini sem crashar."""
     if not resposta:
         return ""
     try:
@@ -146,7 +145,6 @@ def processar_requisicao():
     if not mensagem:
         return jsonify({"resposta": "Olá! Sou seu assistente virtual da Caio Contábil. Como posso ajudar você hoje? 😊"})
 
-    # Detecta telefone/WhatsApp na mensagem
     padrao_telefone = r'(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\s?\d{4}-\d{4}|\d{4}-\d{4}|9\d{8}|\d{8})'
     telefones = re.findall(padrao_telefone, mensagem)
 
@@ -183,9 +181,3 @@ def chat_atendimento():
 @app.route("/<path:path>", methods=["GET", "POST", "OPTIONS"])
 def catch_all(path):
     return home_atendimento()
-
-# ============================================================
-# EXECUÇÃO
-# ============================================================
-if __name__ == "__main__":
-    app.run(debug=True)
