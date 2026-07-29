@@ -1,14 +1,32 @@
 import os
 import json
 import re
+import requests
 import google.generativeai as genai
 from flask import Flask, request, jsonify
 
-# Inicializa o Flask para a Vercel ler como API
 app = Flask(__name__)
 
-# Configuração da API Key do Gemini
+# Configurações de API
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+def enviar_alerta_telegram(mensagem_texto):
+    """
+    Função que dispara um alerta em tempo real para o Grupo de Contadores no Telegram.
+    """
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": mensagem_texto,
+            "parse_mode": "Markdown"
+        }
+        try:
+            requests.post(url, json=payload, timeout=10)
+        except Exception:
+            pass
 
 def carregar_base_radar():
     try:
@@ -19,16 +37,15 @@ def carregar_base_radar():
 
 base_conhecimento = carregar_base_radar()
 
-# Prompts dos Especialistas
 PROMPTS_AGENTES = {
-    "sofia": f"""Você é Sofia, especialista em comunicação e Reforma Tributária na Caio Contábil. Use linguagem simples, evite termos técnicos. BASE TÉCNICA: {json.dumps(base_conhecimento.get('status_reforma_tributaria', {}))}. Se fugir da base técnica, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-    "mateus": f"""Você é Mateus, especialista fiscal da Caio Contábil. Ajuda com notas fiscais, impostos (ICMS, ISS, Simples). BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-    "clara": f"""Você é Clara, especialista em Departamento Pessoal e RH da Caio Contábil. Resolve dúvidas de CLT e eSocial. BASE TÉCNICA: {json.dumps(base_conhecimento.get('diretrizes_trabalhistas_rh', {}))}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-    "lucas": f"""Você é Lucas, especialista contábil da Caio Contábil. Explica caixa e lucros de forma simples. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-    "tiago": f"""Você é Tiago, especialista societário da Caio Contábil. Ajuda a abrir e fechar empresas. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'"""
+    "sofia": f"""Você é Sofia, especialista em comunicação e Reforma Tributária na Caio Contábil. Use linguagem simples. BASE TÉCNICA: {json.dumps(base_conhecimento.get('status_reforma_tributaria', {}))}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
+    "mateus": f"""Você é Mateus, especialista fiscal da Caio Contábil. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
+    "clara": f"""Você é Clara, especialista em Departamento Pessoal e RH. BASE TÉCNICA: {json.dumps(base_conhecimento.get('diretrizes_trabalhistas_rh', {}))}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
+    "lucas": f"""Você é Lucas, especialista contábil. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
+    "tiago": f"""Você é Tiago, especialista societário. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se fugir da base, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'"""
 }
 
-PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio Contábil. Analise o rascunho de resposta. Se contiver '#CONTEUDO_INCONCLUSIVO#', erros ou for complexa, responda: 'BLOQUEADO'. Se estiver correta e simples, responda: 'APROVADO'."""
+PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio Contábil. Analise o rascunho. Se contiver '#CONTEUDO_INCONCLUSIVO#', responda: 'BLOQUEADO'. Caso contrário, responda: 'APROVADO'."""
 
 MENSAGEM_DR_CAIO_CEO = (
     "Olá, aqui é o Dr. Caio, CEO da Caio Contábil. Por se tratar de um ponto altamente complexo ou ainda "
@@ -45,21 +62,43 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
     analise_seguranca = model_auditor.generate_content(f"Mensagem: {mensagem_cliente}\nRascunho: {resposta_rascunho}").text.strip()
     
     if "BLOQUEADO" in analise_seguranca or "#CONTEUDO_INCONCLUSIVO#" in resposta_rascunho:
+        # Alerta o grupo que um cliente caiu no filtro de segurança
+        alerta = (
+            "🚨 *ALERTA DE ATENDIMENTO - CAIO CONTÁBIL IA*\n\n"
+            f"• *Setor solicitado:* {agente_nome.upper()}\n"
+            f"• *Dúvida do cliente:* \"{mensagem_cliente}\"\n\n"
+            "⚠️ _O Bruno Auditor bloqueou a resposta por complexidade técnica. O Dr. Caio assumiu o chat e pediu o contato._"
+        )
+        enviar_alerta_telegram(alerta)
         return MENSAGEM_DR_CAIO_CEO
+        
     return resposta_rascunho
 
-# ROTA DE API PARA O WIDGET/CHATBOT SE CONECTAR
 @app.route("/api/atendimento", methods=["POST"])
 def api_atendimento():
     dados = request.get_json() or {}
     mensagem = dados.get("mensagem", "")
     setor = dados.get("setor", "sofia")
     
-    # Executa a nossa engenharia de agentes cooperativos
+    # Verifica se a mensagem se parece com a entrega de um número de WhatsApp pós-bloqueio
+    padrao_telefone = r'(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\s?\d{4}-\d{4}|\d{4}-\d{4}|9\d{8}|\d{8})'
+    telefones = re.findall(padrao_telefone, mensagem)
+    
+    if telefones:
+        alerta_lead = (
+            "✅ *NOVO CLIENTE CAPTURADO!*\n\n"
+            f"• *WhatsApp localizado:* `{telefones[0]}`\n"
+            f"• *Mensagem final:* \"{mensagem}\"\n\n"
+            "📞 _Por favor, um contador humano deve entrar em contato via (14) 99879-7126 imediatamente._"
+        )
+        enviar_alerta_telegram(alerta_lead)
+        return jsonify({
+            "resposta": "Perfeito! Já captei o seu número. Encaminhei os detalhes para a nossa equipe e em instantes um de nossos contadores especialistas vai te chamar. Obrigado!"
+        })
+
     resposta_final = responder_cliente(setor, mensagem)
     return jsonify({ "resposta": resposta_final })
 
-# Necessário para a Vercel mapear o servidor Flask
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def catch_all(path):
