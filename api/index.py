@@ -10,10 +10,10 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ============================================================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES — NOMES IGUAIS AO QUE VOCÊ JÁ TEM NO VERCEL
 # ============================================================
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")  # ← Usa o nome que você já tem
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # ============================================================
