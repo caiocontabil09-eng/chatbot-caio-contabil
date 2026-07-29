@@ -57,7 +57,7 @@ PROMPTS_AGENTES = {
 }
 
 # =====================================================================
-# 4. PROMPTS DO BACKOFFICE (AUDITORIA E CEO)
+# 4. PROMPTS DO BACKOFFICE (AUDITORIA E CEO COM TELEFONE CORPORATIVO)
 # =====================================================================
 PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio Contábil. Você analisa o rascunho de resposta gerado pelos especialistas de atendimento.
 Se a resposta gerada contiver o termo '#CONTEUDO_INCONCLUSIVO#', contiver erros fiscais claros ou for complexa demais para um cliente simples, você deve responder estritamente com a palavra: 'BLOQUEADO'.
@@ -67,7 +67,8 @@ MENSAGEM_DR_CAIO_CEO = (
     "Olá, aqui é o Dr. Caio, CEO da Caio Contábil. Analisei o seu caso junto aos meus assistentes "
     "virtuais e, por se tratar de um ponto altamente complexo ou ainda inconclusivo na lei atual do governo, "
     "faço questão que um de nossos contadores seniores do time físico te atenda pessoalmente. "
-    "Qual o seu melhor WhatsApp ou telefone com DDD para entrarmos em contato agora?"
+    "Por favor, nos informe o seu melhor WhatsApp com DDD para que nossa equipe entre em contato, "
+    "ou se preferir, você também pode falar conosco direto pelo nosso telefone oficial: (14) 99879-7126."
 )
 
 # =====================================================================
@@ -115,7 +116,7 @@ def extrair_contato_e_salvar(mensagem_cliente):
     telefones_encontrados = re.findall(padrao_telefone, mensagem_cliente)
     
     if telefones_encontrados:
-        whatsapp_capturado = telefones_encontrados[0]
+        whatsapp_capturado = telefones_encontrados
         
         # Estrutura JSON gerada para enviar para sua equipe de contadores reais
         dados_lead = {
@@ -125,11 +126,12 @@ def extrair_contato_e_salvar(mensagem_cliente):
             "alerta": "Caso inconclusivo ou complexo interceptado pelo Bruno Auditor. Repassar para um humano."
         }
         
-        # Mensagem de encerramento amigável para o cliente final
+        # Mensagem de encerramento amigável para o cliente final incluindo o número do escritório
         texto_sucesso = (
             "Perfeito! Já peguei o seu contato técnico. Encaminhei os detalhes para a nossa "
             "equipe física e, em alguns minutos, um de nossos contadores especialistas vai "
-            "te chamar aqui no WhatsApp para analisar seu caso de perto. Muito obrigado!"
+            "te chamar no WhatsApp. Se quiser salvar na agenda, nosso número de retorno "
+            "é o (14) 99879-7126. Muito obrigado!"
         )
         
         return {
@@ -140,8 +142,9 @@ def extrair_contato_e_salvar(mensagem_cliente):
     
     # Caso o cliente digite texto mas esqueça de colocar o número de telefone
     texto_falha = (
-        "Por favor, envie o seu número de WhatsApp com o DDD (exemplo: 11 99999-9999) "
-        "para que eu possa pedir para o nosso time de contadores entrar em contato com você."
+        "Por favor, envie o seu número de WhatsApp com o DDD (exemplo: 14 99999-9999) "
+        "para que eu possa pedir para o nosso time de contadores entrar em contato com você. "
+        "Se preferir, você também pode clicar e nos chamar direto no (14) 99879-7126."
     )
     return {
         "sucesso": False,
