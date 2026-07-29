@@ -1,17 +1,18 @@
 {
-  "ultima_atualizacao": "2026-07-28",
   "status_reforma_tributaria": {
     "pontos_conclusivos": {
-      "unificacao_impostos": "Os impostos PIS, COFINS, IPI, ICMS e ISS estao sendo substituidos pelo IBS (Estados/Municipios) e CBS (Uniao).",
-      "regime_simples_nacional": "O Simples Nacional foi mantido. As empresas podem continuar pagando a guia unificada tradicional normalmente.",
-      "mei": "O MEI continua existindo e mantem o recolhimento em valor fixo mensal (DAS-MEI), sem cobranca direta de IBS/CBS dentro do limite legal."
+      "iva": "O IVA (Imposto sobre Valor Agregado) será implementado gradualmente.",
+      "cbs": "A CBS (Contribuição sobre Bens e Serviços) unificará PIS e Cofins.",
+      "ibs": "O IBS (Imposto sobre Bens e Serviços) será gerido pelos estados e municípios."
     },
     "pontos_inconclusivos": {
-      "aliquota_padrao_final": "A aliquota final somada de IBS e CBS ainda passa por pequenos ajustes regionais de estado para estado e nao foi fixada.",
-      "regras_especificas_subsidios": "Regras de incentivos especificas para alguns setores locais de servicos ainda estao em discussao e votacao."
+      "transicao": "Regras de transição ainda em discussão no Congresso.",
+      "setores_especiais": "Tratamento de setores especiais (educação, saúde, financeiro) ainda não definido."
     }
   },
   "diretrizes_trabalhistas_rh": {
-    "esocial_2026": "Obrigatoriedade de envio de exames medicos de SST e novas regras de simplificacao de fechamento de folha de microempresas ativas."
+    "fgts": "O FGTS continua obrigatório com alíquota de 8%.",
+    "ferias": "30 dias de férias com acréscimo de 1/3.",
+    "rescisao": "Rescisão deve seguir as regras da CLT e convenções coletivas."
   }
 }
