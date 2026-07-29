@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Libera acesso de qualquer origem (seu widget pode falar com o servidor)
+CORS(app)  # Libera acesso de qualquer origem
 
 # Configurações de API nas Variáveis de Ambiente
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
@@ -48,7 +48,7 @@ PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio C
 
 MENSAGEM_DR_CAIO_CEO = (
     "Olá, aqui é o Dr. Caio, CEO da Caio Contábil. Por se tratar de um ponto altamente complexo ou ainda "
-    "inconclusivo na lei, nossa equipe seniores vai te atender pessoamente. Por favor, informe seu WhatsApp com DDD "
+    "inconclusivo na lei, nossa equipe seniores vai te atender pessoalmente. Por favor, informe seu WhatsApp com DDD "
     "ou, se preferir, nos chame direto no nosso telefone oficial: (14) 99879-7126."
 )
 
@@ -92,11 +92,12 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         
     return resposta_rascunho
 
-@app.route("/", methods=["GET", "POST", "OPTIONS"])
-def home_atendimento():
-    if request.method == "GET":
-        return jsonify({ "status": "Servidor Caio Contábil IA Ativo e Operacional" })
-        
+# ============================================================
+# ROTAS PRINCIPAIS
+# ============================================================
+
+def processar_requisicao():
+    """Lógica central que processa qualquer requisição POST."""
     dados = request.get_json() or {}
     
     mensagem = dados.get("mensagem") or dados.get("message") or dados.get("text") or ""
@@ -123,6 +124,19 @@ def home_atendimento():
 
     resposta_final = responder_cliente(setor, mensagem)
     return jsonify({ "resposta": resposta_final })
+
+@app.route("/", methods=["GET", "POST", "OPTIONS"])
+def home_atendimento():
+    if request.method == "GET":
+        return jsonify({ "status": "Servidor Caio Contábil IA Ativo e Operacional" })
+    return processar_requisicao()
+
+# ROTA /chat — o seu widget está chamando essa URL!
+@app.route("/chat", methods=["GET", "POST", "OPTIONS"])
+def chat_atendimento():
+    if request.method == "GET":
+        return jsonify({ "status": "Rota /chat ativa e operacional" })
+    return processar_requisicao()
 
 @app.route("/<path:path>", methods=["GET", "POST", "OPTIONS"])
 def catch_all(path):
