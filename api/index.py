@@ -4,10 +4,18 @@ import re
 import requests
 import google.generativeai as genai
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+
+# ============================================================
+# CORS MANUAL — funciona em qualquer ambiente
+# ============================================================
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # ============================================================
 # CONFIGURAÇÕES
@@ -170,14 +178,20 @@ def processar_requisicao():
 def home_atendimento():
     if request.method == "GET":
         return jsonify({"status": "Servidor Caio Contábil IA Ativo e Operacional 🚀"})
+    if request.method == "OPTIONS":
+        return jsonify({"status": "OK"})
     return processar_requisicao()
 
 @app.route("/chat", methods=["GET", "POST", "OPTIONS"])
 def chat_atendimento():
     if request.method == "GET":
         return jsonify({"status": "Rota /chat ativa e operacional ✅"})
+    if request.method == "OPTIONS":
+        return jsonify({"status": "OK"})
     return processar_requisicao()
 
 @app.route("/<path:path>", methods=["GET", "POST", "OPTIONS"])
 def catch_all(path):
+    if request.method == "OPTIONS":
+        return jsonify({"status": "OK"})
     return home_atendimento()
