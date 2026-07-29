@@ -4,8 +4,10 @@ import re
 import requests
 import google.generativeai as genai
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Libera acesso de qualquer origem (seu widget pode falar com o servidor)
 
 # Configurações de API nas Variáveis de Ambiente
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
@@ -14,7 +16,6 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def enviar_alerta_telegram(mensagem_texto):
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        # CORREÇÃO 2: URL correta da API do Telegram
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
@@ -24,7 +25,6 @@ def enviar_alerta_telegram(mensagem_texto):
         try:
             requests.post(url, json=payload, timeout=10)
         except Exception as e:
-            # Silencia o erro, mas mantém log útil para debug
             print(f"[Telegram] Falha ao enviar alerta: {e}")
 
 def carregar_base_radar():
@@ -48,18 +48,16 @@ PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio C
 
 MENSAGEM_DR_CAIO_CEO = (
     "Olá, aqui é o Dr. Caio, CEO da Caio Contábil. Por se tratar de um ponto altamente complexo ou ainda "
-    "inconclusivo na lei, nossa equipe seniores vai te atender pessoalmente. Por favor, informe seu WhatsApp com DDD "
+    "inconclusivo na lei, nossa equipe seniores vai te atender pessoamente. Por favor, informe seu WhatsApp com DDD "
     "ou, se preferir, nos chame direto no nosso telefone oficial: (14) 99879-7126."
 )
 
 def extrair_texto_seguro(resposta):
-    """CORREÇÃO 3: Evita crash quando o Gemini bloqueia ou retorna vazio."""
     if not resposta or not resposta.candidates:
         return ""
     try:
         return resposta.text
     except Exception:
-        # Fallback para parts se .text falhar (bloqueio de safety, etc.)
         try:
             return "".join(part.text for part in resposta.candidates[0].content.parts)
         except Exception:
@@ -94,7 +92,7 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         
     return resposta_rascunho
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST", "OPTIONS"])
 def home_atendimento():
     if request.method == "GET":
         return jsonify({ "status": "Servidor Caio Contábil IA Ativo e Operacional" })
@@ -123,11 +121,10 @@ def home_atendimento():
             "resposta": "Perfeito! Já captei o seu número. Encaminhei os detalhes para a nossa equipe e em instantes um de nossos contadores especialistas vai te chamar. Obrigado!"
         })
 
-    # CORREÇÃO 1: Usar 'mensagem' em vez de 'message'
     resposta_final = responder_cliente(setor, mensagem)
     return jsonify({ "resposta": resposta_final })
 
-@app.route("/<path:path>", methods=["GET", "POST"])
+@app.route("/<path:path>", methods=["GET", "POST", "OPTIONS"])
 def catch_all(path):
     return home_atendimento()
 
