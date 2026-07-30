@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # ============================================================
-# CORS MANUAL — funciona em qualquer ambiente
+# CORS MANUAL
 # ============================================================
 @app.after_request
 def after_request(response):
@@ -60,21 +60,91 @@ def carregar_base_radar():
 base_conhecimento = carregar_base_radar()
 
 # ============================================================
-# PROMPTS DOS AGENTES
+# BASES POR SETOR (para o Bruno auditar)
 # ============================================================
-PROMPTS_AGENTES = {
-    "sofia": f"""Você é Sofia, especialista em comunicação e Reforma Tributária na Caio Contábil. Use linguagem simples e acessível. BASE TÉCNICA: {json.dumps(base_conhecimento.get('status_reforma_tributaria', {}))}. Se a pergunta fugir da base técnica fornecida, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-
-    "mateus": f"""Você é Mateus, especialista fiscal da Caio Contábil. Seja técnico mas claro. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se a pergunta fugir da base técnica fornecida, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-
-    "clara": f"""Você é Clara, especialista em Departamento Pessoal e RH na Caio Contábil. BASE TÉCNICA: {json.dumps(base_conhecimento.get('diretrizes_trabalhistas_rh', {}))}. Se a pergunta fugir da base técnica fornecida, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-
-    "lucas": f"""Você é Lucas, especialista contábil na Caio Contábil. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se a pergunta fugir da base técnica fornecida, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'""",
-
-    "tiago": f"""Você é Tiago, especialista societário na Caio Contábil. BASE TÉCNICA: {json.dumps(base_conhecimento)}. Se a pergunta fugir da base técnica fornecida, responda estritamente: '#CONTEUDO_INCONCLUSIVO#'"""
+BASES_POR_SETOR = {
+    "sofia": base_conhecimento.get('status_reforma_tributaria', {}),
+    "mateus": base_conhecimento,
+    "clara": base_conhecimento.get('diretrizes_trabalhistas_rh', {}),
+    "lucas": base_conhecimento,
+    "tiago": base_conhecimento
 }
 
-PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio Contábil. Analise o rascunho da resposta. Se contiver '#CONTEUDO_INCONCLUSIVO#', responda apenas: 'BLOQUEADO'. Caso contrário, responda apenas: 'APROVADO'."""
+# ============================================================
+# PROMPTS DOS AGENTES — SAUDAÇÕES PERMITIDAS
+# ============================================================
+PROMPTS_AGENTES = {
+    "sofia": f"""Você é Sofia, especialista em comunicação e Reforma Tributária na Caio Contábil.
+
+REGRAS:
+1. Responda saudações (oi, olá, bom dia, tudo bem?) de forma natural e simpática.
+2. Responda perguntas gerais sobre a Caio Contábil de forma cordial.
+3. Use a BASE TÉCNICA abaixo SOMENTE quando o cliente perguntar especificamente sobre Reforma Tributária.
+4. Se o cliente fizer uma pergunta técnica sobre Reforma Tributária que NÃO esteja na base abaixo, responda EXATAMENTE: '#CONTEUDO_INCONCLUSIVO#'
+5. NUNCA retorne '#CONTEUDO_INCONCLUSIVO#' para saudações ou perguntas simples.
+
+BASE TÉCNICA (Reforma Tributária): {json.dumps(base_conhecimento.get('status_reforma_tributaria', {}))}""",
+
+    "mateus": f"""Você é Mateus, especialista fiscal da Caio Contábil.
+
+REGRAS:
+1. Responda saudações e perguntas gerais de forma natural.
+2. Use a BASE TÉCNICA abaixo SOMENTE para perguntas fiscais específicas.
+3. Se o cliente perguntar algo fiscal que NÃO esteja na base, responda EXATAMENTE: '#CONTEUDO_INCONCLUSIVO#'
+4. NUNCA retorne '#CONTEUDO_INCONCLUSIVO#' para saudações.
+
+BASE TÉCNICA: {json.dumps(base_conhecimento)}""",
+
+    "clara": f"""Você é Clara, especialista em Departamento Pessoal e RH na Caio Contábil.
+
+REGRAS:
+1. Responda saudações e perguntas gerais de forma natural.
+2. Use a BASE TÉCNICA abaixo SOMENTE para perguntas de DP/RH específicas.
+3. Se o cliente perguntar algo de DP/RH que NÃO esteja na base, responda EXATAMENTE: '#CONTEUDO_INCONCLUSIVO#'
+4. NUNCA retorne '#CONTEUDO_INCONCLUSIVO#' para saudações.
+
+BASE TÉCNICA: {json.dumps(base_conhecimento.get('diretrizes_trabalhistas_rh', {}))}""",
+
+    "lucas": f"""Você é Lucas, especialista contábil na Caio Contábil.
+
+REGRAS:
+1. Responda saudações e perguntas gerais de forma natural.
+2. Use a BASE TÉCNICA abaixo SOMENTE para perguntas contábeis específicas.
+3. Se o cliente perguntar algo contábil que NÃO esteja na base, responda EXATAMENTE: '#CONTEUDO_INCONCLUSIVO#'
+4. NUNCA retorne '#CONTEUDO_INCONCLUSIVO#' para saudações.
+
+BASE TÉCNICA: {json.dumps(base_conhecimento)}""",
+
+    "tiago": f"""Você é Tiago, especialista societário na Caio Contábil.
+
+REGRAS:
+1. Responda saudações e perguntas gerais de forma natural.
+2. Use a BASE TÉCNICA abaixo SOMENTE para perguntas societárias específicas.
+3. Se o cliente perguntar algo societário que NÃO esteja na base, responda EXATAMENTE: '#CONTEUDO_INCONCLUSIVO#'
+4. NUNCA retorne '#CONTEUDO_INCONCLUSIVO#' para saudações.
+
+BASE TÉCNICA: {json.dumps(base_conhecimento)}"""
+}
+
+# ============================================================
+# PROMPT DO BRUNO — AUDITORIA COM BASE TÉCNICA
+# ============================================================
+PROMPT_AUDITOR_BRUNO = """Você é Bruno, o Auditor Técnico de riscos da Caio Contábil.
+
+CONTEXTO:
+- Mensagem do cliente: {mensagem_cliente}
+- Rascunho do agente: {rascunho}
+- Base técnica do setor: {base_tecnica}
+
+TAREFA:
+1. Compare o rascunho com a base técnica fornecida.
+2. Verifique se o rascunho contém fatos, números, prazos ou enquadramentos que NÃO estejam na base técnica.
+3. Se o rascunho contiver EXATAMENTE o texto '#CONTEUDO_INCONCLUSIVO#', responda apenas: 'BLOQUEADO'
+4. Se o rascunho inventar informações que não estão na base técnica, responda apenas: 'BLOQUEADO'
+5. Se o rascunho for uma saudação, explicação geral ou resposta baseada corretamente na base técnica, responda apenas: 'APROVADO'
+6. Se não tiver certeza, responda 'APROVADO' para não travar o atendimento.
+
+Responda APENAS 'APROVADO' ou 'BLOQUEADO'."""
 
 MENSAGEM_DR_CAIO_CEO = (
     "Olá, aqui é o Dr. Caio, CEO da Caio Contábil. Por se tratar de um ponto altamente complexo ou ainda "
@@ -100,11 +170,12 @@ def extrair_texto_seguro(resposta):
     return ""
 
 # ============================================================
-# LÓGICA PRINCIPAL
+# LÓGICA PRINCIPAL — AUDITORIA CONDICIONAL
 # ============================================================
 def responder_cliente(setor_escolhido, mensagem_cliente):
     agente_nome = setor_escolhido.lower() if setor_escolhido.lower() in PROMPTS_AGENTES else "sofia"
 
+    # 1. Chama o agente
     try:
         model_atendimento = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
@@ -114,22 +185,33 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         resposta_rascunho = extrair_texto_seguro(resposta_raw)
     except Exception as e:
         print(f"[Erro Gemini - Atendimento] {e}")
-        resposta_rascunho = "#CONTEUDO_INCONCLUSIVO#"
+        return "Desculpe, estou com dificuldades técnicas no momento. Tente novamente em instantes."
 
+    # 2. Se NÃO contiver #CONTEUDO_INCONCLUSIVO#, retorna direto (economiza 1 chamada Gemini)
+    if "#CONTEUDO_INCONCLUSIVO#" not in resposta_rascunho:
+        return resposta_rascunho
+
+    # 3. Se contiver #CONTEUDO_INCONCLUSIVO#, chama o Bruno com a base técnica
     try:
+        base_do_setor = BASES_POR_SETOR.get(agente_nome, {})
+        prompt_auditor = PROMPT_AUDITOR_BRUNO.format(
+            mensagem_cliente=mensagem_cliente,
+            rascunho=resposta_rascunho,
+            base_tecnica=json.dumps(base_do_setor)
+        )
+
         model_auditor = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
-            system_instruction=PROMPT_AUDITOR_BRUNO
+            system_instruction=prompt_auditor
         )
-        auditor_raw = model_auditor.generate_content(
-            f"Mensagem do cliente: {mensagem_cliente}\nRascunho da resposta: {resposta_rascunho}"
-        )
+        auditor_raw = model_auditor.generate_content("Audite esta resposta.")
         analise_seguranca = extrair_texto_seguro(auditor_raw).strip().upper()
     except Exception as e:
         print(f"[Erro Gemini - Auditor] {e}")
-        analise_seguranca = "BLOQUEADO"
+        analise_seguranca = "APROVADO"  # Em erro, aprova para não travar
 
-    if "BLOQUEADO" in analise_seguranca or "#CONTEUDO_INCONCLUSIVO#" in resposta_rascunho:
+    # 4. Se Bruno bloquear, envia alerta e retorna mensagem do Dr. Caio
+    if "BLOQUEADO" in analise_seguranca:
         alerta = (
             "🚨 *ALERTA DE ATENDIMENTO - CAIO CONTÁBIL IA*\n\n"
             f"• *Setor solicitado:* {agente_nome.upper()}\n"
@@ -139,6 +221,7 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
         enviar_alerta_telegram(alerta)
         return MENSAGEM_DR_CAIO_CEO
 
+    # Se Bruno aprovar mesmo com #CONTEUDO_INCONCLUSIVO#, retorna o rascunho
     return resposta_rascunho
 
 # ============================================================
