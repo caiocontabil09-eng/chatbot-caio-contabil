@@ -24,6 +24,11 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
+# Modelo Gemini usado por todos os agentes (atendimento e auditoria).
+# gemini-1.5-flash e gemini-2.0-flash já foram desativados pela Google (retornam 404).
+# gemini-3.1-flash-lite tem shutdown previsto só para maio de 2027 - mais seguro por enquanto.
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+
 # ============================================================
 # TELEGRAM ALERTS
 # ============================================================
@@ -173,7 +178,7 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
 
     try:
         model_atendimento = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name=GEMINI_MODEL,
             system_instruction=PROMPTS_AGENTES[agente_nome]
         )
         resposta_raw = model_atendimento.generate_content(mensagem_cliente)
@@ -194,7 +199,7 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
             base_tecnica=json.dumps(base_do_setor)
         )
         model_auditor = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name=GEMINI_MODEL,
             system_instruction=prompt_auditor
         )
         auditor_raw = model_auditor.generate_content("Audite.")
