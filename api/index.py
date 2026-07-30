@@ -166,15 +166,24 @@ TEXTO_MENU = (
 )
 
 # Mensagem exata (após strip + lower) que o cliente digitou -> setor de destino
+# (usado só para as respostas curtas do menu, tipo clicar em "2")
 OPCOES_MENU = {
-    "1": "mateus", "1️⃣": "mateus", "fiscal": "mateus", "mateus": "mateus",
-    "2": "clara", "2️⃣": "clara", "pessoal": "clara", "dp": "clara", "rh": "clara", "clara": "clara",
-    "3": "lucas", "3️⃣": "lucas", "contabil": "lucas", "contábil": "lucas", "lucas": "lucas",
-    "4": "tiago", "4️⃣": "tiago", "reforma": "tiago", "reforma tributaria": "tiago",
-    "reforma tributária": "tiago", "societario": "tiago", "societário": "tiago", "tiago": "tiago",
+    "1": "mateus", "1️⃣": "mateus",
+    "2": "clara", "2️⃣": "clara",
+    "3": "lucas", "3️⃣": "lucas",
+    "4": "tiago", "4️⃣": "tiago",
 }
 
-# Frases que indicam que o cliente quer trocar de atendente no meio da conversa
+# Palavras/nomes que podem aparecer em QUALQUER parte de uma frase livre
+# ("quero falar com o Matheus", "minha dúvida é sobre RH") -> setor de destino
+PADROES_SETOR = {
+    "mateus": [r"\bmateus\b", r"\bmatheus\b", r"\bfiscal\b"],
+    "clara": [r"\bclara\b", r"\bdp\b", r"\brh\b", r"departamento pessoal", r"recursos humanos", r"\btrabalhista\b"],
+    "lucas": [r"\blucas\b", r"\bcontabil\b", r"\bcontábil\b", r"\bcontabilidade\b"],
+    "tiago": [r"\btiago\b", r"reforma tributaria", r"reforma tributária", r"\bsocietario\b", r"\bsocietário\b"],
+}
+
+# Frases genéricas (sem citar nome de agente) que indicam pedido de troca
 FRASES_TROCA_ATENDENTE = [
     "falar com outro", "falar com outra pessoa", "trocar de atendente", "trocar atendente",
     "voltar ao menu", "outro especialista", "menu principal", "mudar de setor", "menu de novo",
@@ -185,7 +194,16 @@ def detectar_pedido_de_troca(mensagem):
     msg = mensagem.strip().lower()
     return any(frase in msg for frase in FRASES_TROCA_ATENDENTE)
 
+def detectar_setor_mencionado(mensagem):
+    """Procura nome de agente ou palavra-chave de setor em qualquer parte da frase."""
+    msg = mensagem.lower()
+    for setor, padroes in PADROES_SETOR.items():
+        if any(re.search(padrao, msg) for padrao in padroes):
+            return setor
+    return None
+
 def detectar_escolha_menu(mensagem):
+    """Só bate se a mensagem inteira for exatamente uma opção numérica do menu."""
     msg = mensagem.strip().lower()
     return OPCOES_MENU.get(msg)
 
@@ -294,13 +312,21 @@ def processar_requisicao():
             "setor": setor
         })
 
-    # Cliente pediu explicitamente para trocar de atendente -> reabre o menu
+    # Cliente citou o nome de um agente ou palavra-chave do setor em qualquer
+    # parte da frase ("quero falar com o Matheus", "minha dúvida é de RH") -> troca na hora
+    setor_mencionado = detectar_setor_mencionado(mensagem)
+    if setor_mencionado and setor_mencionado != setor:
+        resposta_boas_vindas = responder_cliente(
+            setor_mencionado,
+            "Se apresente brevemente em uma frase e pergunte como pode ajudar."
+        )
+        return jsonify({"resposta": resposta_boas_vindas, "setor": setor_mencionado})
+
+    # Cliente pediu para trocar de atendente sem citar nome -> reabre o menu
     if detectar_pedido_de_troca(mensagem):
         return jsonify({"resposta": TEXTO_MENU, "setor": "sofia"})
 
-    # Mensagem é uma escolha de menu (número ou nome do setor) -> troca de agente.
-    # Um "2" isolado só bate com o dicionário se for exatamente uma opção do menu,
-    # então não interfere em perguntas normais que contenham números.
+    # Mensagem inteira é exatamente uma opção numérica do menu (ex: cliente digitou só "2")
     setor_escolhido = detectar_escolha_menu(mensagem)
     if setor_escolhido and setor_escolhido != setor:
         resposta_boas_vindas = responder_cliente(
