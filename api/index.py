@@ -155,6 +155,41 @@ MENSAGEM_DR_CAIO_CEO = (
 )
 
 # ============================================================
+# ROTEAMENTO DE MENU / TROCA DE ATENDENTE
+# ============================================================
+TEXTO_MENU = (
+    "Perfeito! Com qual especialista você gostaria de falar? Escolha uma opção:\n"
+    "1️⃣ Fiscal (Mateus)\n"
+    "2️⃣ Pessoal / DP / RH (Clara)\n"
+    "3️⃣ Contábil (Lucas)\n"
+    "4️⃣ Reforma Tributária (Tiago)"
+)
+
+# Mensagem exata (após strip + lower) que o cliente digitou -> setor de destino
+OPCOES_MENU = {
+    "1": "mateus", "1️⃣": "mateus", "fiscal": "mateus", "mateus": "mateus",
+    "2": "clara", "2️⃣": "clara", "pessoal": "clara", "dp": "clara", "rh": "clara", "clara": "clara",
+    "3": "lucas", "3️⃣": "lucas", "contabil": "lucas", "contábil": "lucas", "lucas": "lucas",
+    "4": "tiago", "4️⃣": "tiago", "reforma": "tiago", "reforma tributaria": "tiago",
+    "reforma tributária": "tiago", "societario": "tiago", "societário": "tiago", "tiago": "tiago",
+}
+
+# Frases que indicam que o cliente quer trocar de atendente no meio da conversa
+FRASES_TROCA_ATENDENTE = [
+    "falar com outro", "falar com outra pessoa", "trocar de atendente", "trocar atendente",
+    "voltar ao menu", "outro especialista", "menu principal", "mudar de setor", "menu de novo",
+    "outro assunto", "falar com alguem", "falar com alguém",
+]
+
+def detectar_pedido_de_troca(mensagem):
+    msg = mensagem.strip().lower()
+    return any(frase in msg for frase in FRASES_TROCA_ATENDENTE)
+
+def detectar_escolha_menu(mensagem):
+    msg = mensagem.strip().lower()
+    return OPCOES_MENU.get(msg)
+
+# ============================================================
 # UTILITÁRIOS
 # ============================================================
 def extrair_texto_seguro(resposta):
@@ -234,10 +269,13 @@ def processar_requisicao():
     dados = request.get_json() or {}
 
     mensagem = dados.get("mensagem") or dados.get("message") or dados.get("text") or ""
-    setor = dados.get("setor") or dados.get("department") or "sofia"
+    setor = (dados.get("setor") or dados.get("department") or "sofia").lower()
 
     if not mensagem:
-        return jsonify({"resposta": "Olá! Sou a Sofia, recepcionista virtual da Caio Contábil. Como posso ajudar você hoje? 😊"})
+        return jsonify({
+            "resposta": "Olá! Sou a Sofia, recepcionista virtual da Caio Contábil. Como posso ajudar você hoje? 😊",
+            "setor": "sofia"
+        })
 
     # Detecta telefone/WhatsApp
     padrao_telefone = r'(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\s?\d{4}-\d{4}|\d{4}-\d{4}|9\d{8}|\d{8})'
@@ -252,11 +290,27 @@ def processar_requisicao():
         )
         enviar_alerta_telegram(alerta_lead)
         return jsonify({
-            "resposta": "Perfeito! Já captei o seu número. Em instantes um contador especialista vai te chamar. Obrigado! 🙏"
+            "resposta": "Perfeito! Já captei o seu número. Em instantes um contador especialista vai te chamar. Obrigado! 🙏",
+            "setor": setor
         })
 
+    # Cliente pediu explicitamente para trocar de atendente -> reabre o menu
+    if detectar_pedido_de_troca(mensagem):
+        return jsonify({"resposta": TEXTO_MENU, "setor": "sofia"})
+
+    # Mensagem é uma escolha de menu (número ou nome do setor) -> troca de agente.
+    # Um "2" isolado só bate com o dicionário se for exatamente uma opção do menu,
+    # então não interfere em perguntas normais que contenham números.
+    setor_escolhido = detectar_escolha_menu(mensagem)
+    if setor_escolhido and setor_escolhido != setor:
+        resposta_boas_vindas = responder_cliente(
+            setor_escolhido,
+            "Se apresente brevemente em uma frase e pergunte como pode ajudar."
+        )
+        return jsonify({"resposta": resposta_boas_vindas, "setor": setor_escolhido})
+
     resposta_final = responder_cliente(setor, mensagem)
-    return jsonify({"resposta": resposta_final})
+    return jsonify({"resposta": resposta_final, "setor": setor})
 
 # ============================================================
 # ROTAS
