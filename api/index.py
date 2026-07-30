@@ -2,7 +2,8 @@ import os
 import json
 import re
 import requests
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -20,7 +21,7 @@ def after_request(response):
 # ============================================================
 # CONFIGURAÇÕES
 # ============================================================
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -160,14 +161,16 @@ def extrair_texto_seguro(resposta):
     if not resposta:
         return ""
     try:
-        return resposta.text
+        if resposta.text:
+            return resposta.text
     except Exception:
-        try:
-            if resposta.candidates and len(resposta.candidates) > 0:
-                parts = resposta.candidates[0].content.parts
-                return "".join(part.text for part in parts if hasattr(part, 'text'))
-        except Exception:
-            pass
+        pass
+    try:
+        if resposta.candidates and len(resposta.candidates) > 0:
+            parts = resposta.candidates[0].content.parts
+            return "".join(part.text for part in parts if hasattr(part, 'text') and part.text)
+    except Exception:
+        pass
     return ""
 
 # ============================================================
@@ -177,11 +180,13 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
     agente_nome = setor_escolhido.lower() if setor_escolhido.lower() in PROMPTS_AGENTES else "sofia"
 
     try:
-        model_atendimento = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            system_instruction=PROMPTS_AGENTES[agente_nome]
+        resposta_raw = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=mensagem_cliente,
+            config=types.GenerateContentConfig(
+                system_instruction=PROMPTS_AGENTES[agente_nome]
+            )
         )
-        resposta_raw = model_atendimento.generate_content(mensagem_cliente)
         resposta_rascunho = extrair_texto_seguro(resposta_raw)
     except Exception as e:
         print(f"[Erro Gemini - Atendimento] {e}")
@@ -198,11 +203,13 @@ def responder_cliente(setor_escolhido, mensagem_cliente):
             rascunho=resposta_rascunho,
             base_tecnica=json.dumps(base_do_setor)
         )
-        model_auditor = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            system_instruction=prompt_auditor
+        auditor_raw = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents="Audite.",
+            config=types.GenerateContentConfig(
+                system_instruction=prompt_auditor
+            )
         )
-        auditor_raw = model_auditor.generate_content("Audite.")
         analise_seguranca = extrair_texto_seguro(auditor_raw).strip().upper()
     except Exception as e:
         print(f"[Erro Gemini - Auditor] {e}")
